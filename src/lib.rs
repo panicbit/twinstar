@@ -201,10 +201,10 @@ fn load_key() -> Result<PrivateKey> {
     Ok(key)
 }
 
-const GEMINI_MIME: &str = "text/gemini";
+const GEMINI_MIME_STR: &str = "text/gemini";
 
 pub fn gemini_mime() -> Result<Mime> {
-    let mime = GEMINI_MIME.parse()?;
+    let mime = GEMINI_MIME_STR.parse()?;
     Ok(mime)
 }
 
