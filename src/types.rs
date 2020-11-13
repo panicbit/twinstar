@@ -4,14 +4,23 @@ use mime::Mime;
 use percent_encoding::percent_decode_str;
 use tokio::{io::AsyncRead, fs::File};
 use uriparse::URIReference;
+use rustls::Certificate;
 
 pub struct Request {
     uri: URIReference<'static>,
     input: Option<String>,
+    certificate: Option<Certificate>,
 }
 
 impl Request {
-    pub fn from_uri(mut uri: URIReference<'static>) -> Result<Self> {
+    pub fn from_uri(uri: URIReference<'static>) -> Result<Self> {
+        Self::with_certificate(uri, None)
+    }
+
+    pub fn with_certificate(
+        mut uri: URIReference<'static>,
+        certificate: Option<Certificate>
+    ) -> Result<Self> {
         uri.normalize();
 
         let input = match uri.query() {
@@ -27,6 +36,7 @@ impl Request {
         Ok(Self {
             uri,
             input,
+            certificate,
         })
     }
 
@@ -45,6 +55,14 @@ impl Request {
 
     pub fn input(&self) -> Option<&str> {
         self.input.as_deref()
+    }
+
+    pub fn set_cert(&mut self, cert: Option<Certificate>) {
+        self.certificate = cert;
+    }
+
+    pub fn certificate(&self) -> Option<&Certificate> {
+        self.certificate.as_ref()
     }
 }
 
@@ -91,6 +109,20 @@ impl ResponseHeader {
         })
     }
 
+    pub fn client_certificate_required() -> Result<Self> {
+        Ok(Self {
+            status: Status::CLIENT_CERTIFICATE_REQUIRED,
+            meta: Meta::new("No certificate provided")?,
+        })
+    }
+
+    pub fn certificate_not_authorized() -> Result<Self> {
+        Ok(Self {
+            status: Status::CERTIFICATE_NOT_AUTHORIZED,
+            meta: Meta::new("Your certificate is not authorized to view this content")?,
+        })
+    }
+
     pub fn status(&self) -> &Status {
         &self.status
     }
@@ -120,6 +152,8 @@ impl Status {
     pub const PROXY_REQUEST_REFUSED: Self = Self(53);
     pub const BAD_REQUEST: Self = Self(59);
     pub const CLIENT_CERTIFICATE_REQUIRED: Self = Self(60);
+    pub const CERTIFICATE_NOT_AUTHORIZED: Self = Self(61);
+    pub const CERTIFICATE_NOT_VALID: Self = Self(62);
 
     pub fn code(&self) -> u8 {
         self.0
@@ -234,6 +268,16 @@ impl Response {
 
     pub fn not_found() -> Result<Self> {
         let header = ResponseHeader::not_found()?;
+        Ok(Self::new(header))
+    }
+
+    pub fn client_certificate_required() -> Result<Self> {
+        let header = ResponseHeader::client_certificate_required()?;
+        Ok(Self::new(header))
+    }
+
+    pub fn certificate_not_authorized() -> Result<Self> {
+        let header = ResponseHeader::certificate_not_authorized()?;
         Ok(Self::new(header))
     }
 

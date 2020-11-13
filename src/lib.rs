@@ -9,6 +9,7 @@ use tokio::{
     net::{TcpStream, ToSocketAddrs},
 };
 use tokio::net::TcpListener;
+use rustls::ClientCertVerifier;
 use tokio_rustls::{rustls, TlsAcceptor};
 use rustls::*;
 use anyhow::*;
@@ -20,6 +21,7 @@ pub mod util;
 pub use mime;
 pub use uriparse as uri;
 pub use types::*;
+pub use rustls::Certificate;
 
 pub const REQUEST_URI_MAX_LEN: usize = 1024;
 pub const GEMINI_PORT: u16 = 1965;
@@ -56,8 +58,18 @@ impl Server {
         let stream = self.tls_acceptor.accept(stream).await?;
         let mut stream = BufStream::new(stream);
 
-        let request = receive_request(&mut stream).await?;
+        let mut request = receive_request(&mut stream).await?;
         debug!("Client requested: {}", request.uri());
+
+        // Identify the client certificate from the tls stream.  This is the first
+        // certificate in the certificate chain.
+        let client_cert = stream.get_ref()
+            .get_ref()
+            .1
+            .get_peer_certificates()
+            .and_then(|mut v| if v.is_empty() {None} else {Some(v.remove(0))});
+
+        request.set_cert(client_cert);
 
         let handler = (self.handler)(request);
         let handler = AssertUnwindSafe(handler);
@@ -97,7 +109,7 @@ impl<A: ToSocketAddrs> Builder<A> {
             listener: Arc::new(TcpListener::bind(self.addr).await?),
             handler: Arc::new(handler),
         };
-        
+
         server.serve().await
     }
 }
@@ -159,7 +171,7 @@ async fn send_response_body(body: Body, stream: &mut (impl AsyncWrite + Unpin)) 
 }
 
 fn tls_config() -> Result<Arc<ServerConfig>> {
-    let mut config = ServerConfig::new(NoClientAuth::new());
+    let mut config = ServerConfig::new(AllowAnonOrSelfsignedClient::new());
 
     let cert_chain = load_cert_chain()?;
     let key = load_key()?;
@@ -181,7 +193,7 @@ fn load_key() -> Result<PrivateKey> {
     let mut keys = BufReader::new(std::fs::File::open("cert/key.pem")?);
     let mut keys = rustls::internal::pemfile::pkcs8_private_keys(&mut keys)
         .map_err(|_| anyhow!("failed to load key"))?;
-    
+
     ensure!(!keys.is_empty(), "no key found");
 
     let key = keys.swap_remove(0);
@@ -196,4 +208,38 @@ pub fn gemini_mime() -> Result<Mime> {
     Ok(mime)
 }
 
+/// A client cert verifier that accepts all connections
+///
+/// Unfortunately, rustls doesn't provide a ClientCertVerifier that accepts self-signed
+/// certificates, so we need to implement this ourselves.
+struct AllowAnonOrSelfsignedClient { }
+impl AllowAnonOrSelfsignedClient {
 
+    /// Create a new verifier
+    fn new() -> Arc<Self> {
+        Arc::new(Self {})
+    }
+
+}
+
+impl ClientCertVerifier for AllowAnonOrSelfsignedClient {
+
+    fn client_auth_root_subjects(
+        &self,
+        _: Option<&webpki::DNSName>
+    ) -> Option<DistinguishedNames> {
+        Some(Vec::new())
+    }
+
+    fn client_auth_mandatory(&self, _sni: Option<&webpki::DNSName>) -> Option<bool> {
+        Some(false)
+    }
+
+    fn verify_client_cert(
+        &self,
+        _: &[Certificate],
+        _: Option<&webpki::DNSName>
+    ) -> Result<ClientCertVerified, TLSError> {
+        Ok(ClientCertVerified::assertion())
+    }
+}
