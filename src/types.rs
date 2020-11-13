@@ -91,6 +91,20 @@ impl ResponseHeader {
         })
     }
 
+    pub fn needs_certificate() -> Result<Self> {
+        Ok(Self {
+            status: Status::CLIENT_CERTIFICATE_REQUIRED,
+            meta: Meta::new("No certificate provided")?,
+        })
+    }
+
+    pub fn not_authorized() -> Result<Self> {
+        Ok(Self {
+            status: Status::CERTIFICATE_NOT_AUTHORIZED,
+            meta: Meta::new("Your certificate is not authorized to view this content")?,
+        })
+    }
+
     pub fn status(&self) -> &Status {
         &self.status
     }
@@ -120,6 +134,8 @@ impl Status {
     pub const PROXY_REQUEST_REFUSED: Self = Self(53);
     pub const BAD_REQUEST: Self = Self(59);
     pub const CLIENT_CERTIFICATE_REQUIRED: Self = Self(60);
+    pub const CERTIFICATE_NOT_AUTHORIZED: Self = Self(61);
+    pub const CERTIFICATE_NOT_VALID: Self = Self(62);
 
     pub fn code(&self) -> u8 {
         self.0
@@ -234,6 +250,16 @@ impl Response {
 
     pub fn not_found() -> Result<Self> {
         let header = ResponseHeader::not_found()?;
+        Ok(Self::new(header))
+    }
+
+    pub fn needs_certificate() -> Result<Self> {
+        let header = ResponseHeader::needs_certificate()?;
+        Ok(Self::new(header))
+    }
+
+    pub fn not_authorized() -> Result<Self> {
+        let header = ResponseHeader::not_authorized()?;
         Ok(Self::new(header))
     }
 

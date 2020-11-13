@@ -8,6 +8,7 @@ description = "Gemini server implementation"
 
 [dependencies]
 anyhow = "1.0.33"
+rustls = { version = "0.18.1", features = ["dangerous_configuration"] }
 tokio-rustls = "0.20.0"
 tokio = { version = "0.3.1", features = ["full"] }
 mime = "0.3.16"
@@ -16,3 +17,4 @@ percent-encoding = "2.1.0"
 futures = "0.3.7"
 itertools = "0.9.0"
 log = "0.4.11"
+webpki = "0.21.0"
