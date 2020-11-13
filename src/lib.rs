@@ -14,6 +14,7 @@ use tokio_rustls::{rustls, TlsAcceptor};
 use rustls::*;
 use anyhow::*;
 use uri::URIReference;
+use lazy_static::lazy_static;
 
 pub mod types;
 pub mod util;
@@ -203,9 +204,13 @@ fn load_key() -> Result<PrivateKey> {
 
 const GEMINI_MIME_STR: &str = "text/gemini";
 
+lazy_static! {
+    pub static ref GEMINI_MIME: Mime = GEMINI_MIME_STR.parse().expect("northstar BUG");
+}
+
+#[deprecated(note = "Use `GEMINI_MIME` instead", since = "0.3.0")]
 pub fn gemini_mime() -> Result<Mime> {
-    let mime = GEMINI_MIME_STR.parse()?;
-    Ok(mime)
+    Ok(GEMINI_MIME.clone())
 }
 
 /// A client cert verifier that accepts all connections
@@ -241,5 +246,15 @@ impl ClientCertVerifier for AllowAnonOrSelfsignedClient {
         _: Option<&webpki::DNSName>
     ) -> Result<ClientCertVerified, TLSError> {
         Ok(ClientCertVerified::assertion())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn gemini_mime_parses() {
+        let _: &Mime = &GEMINI_MIME;
     }
 }
