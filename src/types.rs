@@ -109,14 +109,14 @@ impl ResponseHeader {
         })
     }
 
-    pub fn needs_certificate() -> Result<Self> {
+    pub fn client_certificate_required() -> Result<Self> {
         Ok(Self {
             status: Status::CLIENT_CERTIFICATE_REQUIRED,
             meta: Meta::new("No certificate provided")?,
         })
     }
 
-    pub fn not_authorized() -> Result<Self> {
+    pub fn certificate_not_authorized() -> Result<Self> {
         Ok(Self {
             status: Status::CERTIFICATE_NOT_AUTHORIZED,
             meta: Meta::new("Your certificate is not authorized to view this content")?,
@@ -271,13 +271,13 @@ impl Response {
         Ok(Self::new(header))
     }
 
-    pub fn needs_certificate() -> Result<Self> {
-        let header = ResponseHeader::needs_certificate()?;
+    pub fn client_certificate_required() -> Result<Self> {
+        let header = ResponseHeader::client_certificate_required()?;
         Ok(Self::new(header))
     }
 
-    pub fn not_authorized() -> Result<Self> {
-        let header = ResponseHeader::not_authorized()?;
+    pub fn certificate_not_authorized() -> Result<Self> {
+        let header = ResponseHeader::certificate_not_authorized()?;
         Ok(Self::new(header))
     }
 

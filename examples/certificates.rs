@@ -57,7 +57,7 @@ fn handle_request(users: Arc<RwLock<HashMap<CertBytes, String>>>, request: Reque
             }
         } else {
             // The user didn't provide a certificate
-            Response::needs_certificate()
+            Response::client_certificate_required()
         }
     }.boxed()
 }
