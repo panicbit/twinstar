@@ -202,9 +202,11 @@ fn load_key() -> Result<PrivateKey> {
     Ok(key)
 }
 
-const GEMINI_MIME_STR: &str = "text/gemini";
+/// Mime for Gemini documents
+pub const GEMINI_MIME_STR: &str = "text/gemini";
 
 lazy_static! {
+    /// Mime for Gemini documents ("text/gemini")
     pub static ref GEMINI_MIME: Mime = GEMINI_MIME_STR.parse().expect("northstar BUG");
 }
 
