@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
     let users = Arc::<RwLock::<HashMap<CertBytes, String>>>::default();
 
     Server::bind(("0.0.0.0", GEMINI_PORT))
-        .serve(move|req, cert| handle_request(users.clone(), req, cert))
+        .serve(move|req| handle_request(users.clone(), req))
         .await
 }
 
@@ -24,12 +24,12 @@ async fn main() -> Result<()> {
 /// selecting a username.  They'll then get a message confirming their account creation.
 /// Any time this user visits the site in the future, they'll get a personalized welcome
 /// message.
-fn handle_request(users: Arc<RwLock<HashMap<CertBytes, String>>>, request: Request, cert: Option<Certificate>) -> BoxFuture<'static, Result<Response>> {
+fn handle_request(users: Arc<RwLock<HashMap<CertBytes, String>>>, request: Request) -> BoxFuture<'static, Result<Response>> {
     async move {
-        if let Some(Certificate(cert_bytes)) = cert {
+        if let Some(Certificate(cert_bytes)) = request.certificate() {
             // The user provided a certificate
             let users_read = users.read().await;
-            if let Some(user) = users_read.get(&cert_bytes) {
+            if let Some(user) = users_read.get(cert_bytes) {
                 // The user has already registered
                 Ok(
                     Response::success(&gemini_mime()?)?
@@ -42,7 +42,7 @@ fn handle_request(users: Arc<RwLock<HashMap<CertBytes, String>>>, request: Reque
                     // The user provided some input (a username request)
                     let username = query_part.as_str();
                     let mut users_write = users.write().await;
-                    users_write.insert(cert_bytes, username.to_owned());
+                    users_write.insert(cert_bytes.clone(), username.to_owned());
                     Ok(
                         Response::success(&gemini_mime()?)?
                             .with_body(format!(

@@ -4,14 +4,23 @@ use mime::Mime;
 use percent_encoding::percent_decode_str;
 use tokio::{io::AsyncRead, fs::File};
 use uriparse::URIReference;
+use rustls::Certificate;
 
 pub struct Request {
     uri: URIReference<'static>,
     input: Option<String>,
+    certificate: Option<Certificate>,
 }
 
 impl Request {
-    pub fn from_uri(mut uri: URIReference<'static>) -> Result<Self> {
+    pub fn from_uri(uri: URIReference<'static>) -> Result<Self> {
+        Self::with_certificate(uri, None)
+    }
+
+    pub fn with_certificate(
+        mut uri: URIReference<'static>,
+        certificate: Option<Certificate>
+    ) -> Result<Self> {
         uri.normalize();
 
         let input = match uri.query() {
@@ -27,6 +36,7 @@ impl Request {
         Ok(Self {
             uri,
             input,
+            certificate,
         })
     }
 
@@ -45,6 +55,14 @@ impl Request {
 
     pub fn input(&self) -> Option<&str> {
         self.input.as_deref()
+    }
+
+    pub fn set_cert(&mut self, cert: Option<Certificate>) {
+        self.certificate = cert;
+    }
+
+    pub fn certificate(&self) -> Option<&Certificate> {
+        self.certificate.as_ref()
     }
 }
 

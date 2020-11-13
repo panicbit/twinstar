@@ -26,7 +26,7 @@ pub use rustls::Certificate;
 pub const REQUEST_URI_MAX_LEN: usize = 1024;
 pub const GEMINI_PORT: u16 = 1965;
 
-type Handler = Arc<dyn Fn(Request, Option<Certificate>) -> HandlerResponse + Send + Sync>;
+type Handler = Arc<dyn Fn(Request) -> HandlerResponse + Send + Sync>;
 type HandlerResponse = BoxFuture<'static, Result<Response>>;
 
 #[derive(Clone)]
@@ -58,7 +58,7 @@ impl Server {
         let stream = self.tls_acceptor.accept(stream).await?;
         let mut stream = BufStream::new(stream);
 
-        let request = receive_request(&mut stream).await?;
+        let mut request = receive_request(&mut stream).await?;
         debug!("Client requested: {}", request.uri());
 
         // Identify the client certificate from the tls stream.  This is the first
@@ -69,7 +69,9 @@ impl Server {
             .get_peer_certificates()
             .and_then(|mut v| if v.is_empty() {None} else {Some(v.remove(0))});
 
-        let handler = (self.handler)(request, client_cert);
+        request.set_cert(client_cert);
+
+        let handler = (self.handler)(request);
         let handler = AssertUnwindSafe(handler);
 
         let response = handler.catch_unwind().await
@@ -98,7 +100,7 @@ impl<A: ToSocketAddrs> Builder<A> {
 
     pub async fn serve<F>(self, handler: F) -> Result<()>
     where
-        F: Fn(Request, Option<Certificate>) -> HandlerResponse + Send + Sync + 'static,
+        F: Fn(Request) -> HandlerResponse + Send + Sync + 'static,
     {
         let config = tls_config()?;
 
