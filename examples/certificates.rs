@@ -1,5 +1,6 @@
 use anyhow::*;
 use futures::{future::BoxFuture, FutureExt};
+use log::LevelFilter;
 use tokio::sync::RwLock;
 use northstar::{Certificate, GEMINI_MIME, GEMINI_PORT, Request, Response, Server};
 use std::collections::HashMap;
@@ -10,6 +11,10 @@ type CertBytes = Vec<u8>;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    env_logger::builder()
+        .filter_module("northstar", LevelFilter::Debug)
+        .init();
+
     let users = Arc::<RwLock::<HashMap<CertBytes, String>>>::default();
 
     Server::bind(("0.0.0.0", GEMINI_PORT))

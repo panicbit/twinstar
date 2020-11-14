@@ -25,14 +25,16 @@ pub async fn serve_file<P: AsRef<Path>>(path: P, mime: &Mime) -> Result<Response
 
 pub async fn serve_dir<D: AsRef<Path>, P: AsRef<Path>>(dir: D, virtual_path: &[P]) -> Result<Response> {
     debug!("Dir: {}", dir.as_ref().display());
-    let dir = dir.as_ref().canonicalize()?;
+    let dir = dir.as_ref().canonicalize()
+        .context("Failed to canonicalize directory")?;
     let mut path = dir.to_path_buf();
 
     for segment in virtual_path {
         path.push(segment);
     }
 
-    let path = path.canonicalize()?;
+    let path = path.canonicalize()
+        .context("Failed to canonicalize path")?;
 
     if !path.starts_with(&dir) {
         return Ok(Response::not_found());
@@ -67,10 +69,12 @@ async fn serve_dir_listing<P: AsRef<Path>, B: AsRef<Path>>(path: P, virtual_path
         writeln!(listing, "=> .. 📁 ../")?;
     }
 
-    while let Some(entry) = dir.next_entry().await? {
+    while let Some(entry) = dir.next_entry().await.context("Failed to list directory")? {
         let file_name = entry.file_name();
         let file_name = file_name.to_string_lossy();
-        let is_dir = entry.file_type().await?.is_dir();
+        let is_dir = entry.file_type().await
+            .with_context(|| format!("Failed to get file type of `{}`", entry.path().display()))?
+            .is_dir();
 
         writeln!(
             listing,
