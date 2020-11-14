@@ -232,9 +232,12 @@ impl StatusCategory {
 pub struct Meta(String);
 
 impl Meta {
+    pub const MAX_LEN: usize = 1024;
+
     /// Creates a new "Meta" string. Fails if `meta` contains `\n`.
     pub fn new(meta: impl AsRef<str> + Into<String>) -> Result<Self> {
         ensure!(!meta.as_ref().contains("\n"), "Meta must not contain newlines");
+        ensure!(meta.as_ref().len() <= Self::MAX_LEN, "Meta must not exceed {} bytes", Self::MAX_LEN);
 
         Ok(Self(meta.into()))
     }
@@ -242,16 +245,19 @@ impl Meta {
     /// Cretaes a new "Meta" string. Truncates `meta` to before the first occurrence of `\n`.
     pub fn new_lossy(meta: impl AsRef<str> + Into<String>) -> Self {
         let meta = meta.as_ref();
-        let newline_pos = meta.char_indices().position(|(_i, ch)| ch == '\n');
+        let truncate_pos = meta.char_indices().position(|(i, ch)| {
+            let is_newline = ch == '\n';
+            let exceeds_limit = (i + ch.len_utf8()) > Self::MAX_LEN;
 
-        match newline_pos {
-            None => Self(meta.into()),
-            Some(newline_pos) => {
-                let meta = meta.get(..newline_pos).expect("northstar BUG");
+            is_newline || exceeds_limit
+        });
 
-                Self(meta.into())
-            }
-        }
+        let meta: String = match truncate_pos {
+            None => meta.into(),
+            Some(truncate_pos) => meta.get(..truncate_pos).expect("northstar BUG").into(),
+        };
+
+        Self(meta)
     }
 
     pub fn empty() -> Self {
@@ -368,6 +374,31 @@ impl From<File> for Body {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::iter::repeat;
+
+    #[test]
+    fn meta_new_rejects_newlines() {
+        let meta = "foo\nbar";
+        let meta = Meta::new(meta);
+
+        assert!(meta.is_err());
+    }
+
+    #[test]
+    fn meta_new_accepts_max_len() {
+        let meta: String = repeat('x').take(Meta::MAX_LEN).collect();
+        let meta = Meta::new(meta);
+
+        assert!(meta.is_ok());
+    }
+
+    #[test]
+    fn meta_new_rejects_exceeding_max_len() {
+        let meta: String = repeat('x').take(Meta::MAX_LEN + 1).collect();
+        let meta = Meta::new(meta);
+
+        assert!(meta.is_err());
+    }
 
     #[test]
     fn meta_new_lossy_truncates() {
@@ -393,11 +424,31 @@ mod tests {
         assert_eq!(meta.as_str(), "");
     }
 
-        #[test]
+    #[test]
     fn meta_new_lossy_truncates_to_empty() {
         let meta = "\n\n\n";
         let meta = Meta::new_lossy(meta);
 
         assert_eq!(meta.as_str(), "");
+    }
+
+    #[test]
+    fn meta_new_lossy_truncates_to_max_len() {
+        let meta: String = repeat('x').take(Meta::MAX_LEN + 1).collect();
+        let meta = Meta::new_lossy(meta);
+
+        assert_eq!(meta.as_str().len(), Meta::MAX_LEN);
+    }
+
+    #[test]
+    fn meta_new_lossy_truncates_multi_byte_sequences() {
+        let mut meta: String = repeat('x').take(Meta::MAX_LEN - 1).collect();
+        meta.push('🦀');
+
+        assert_eq!(meta.len(), Meta::MAX_LEN + 3);
+
+        let meta = Meta::new_lossy(meta);
+
+        assert_eq!(meta.as_str().len(), Meta::MAX_LEN - 1);
     }
 }
