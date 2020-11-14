@@ -1,5 +1,6 @@
 use anyhow::*;
-use crate::types::{ResponseHeader, Body, Mime};
+use crate::types::{ResponseHeader, Body, Mime, Document};
+use crate::GEMINI_MIME;
 
 pub struct Response {
     header: ResponseHeader,
@@ -12,6 +13,10 @@ impl Response {
             header,
             body: None,
         }
+    }
+
+    pub fn document(document: Document) -> Self {
+        Self::success(&GEMINI_MIME).with_body(document)
     }
 
     pub fn input(prompt: impl AsRef<str> + Into<String>) -> Result<Self> {

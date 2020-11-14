@@ -1,8 +1,16 @@
 use tokio::{io::AsyncRead, fs::File};
 
+use crate::types::Document;
+
 pub enum Body {
     Bytes(Vec<u8>),
     Reader(Box<dyn AsyncRead + Send + Sync + Unpin>),
+}
+
+impl From<Document> for Body {
+    fn from(document: Document) -> Self {
+        Body::from(document.to_string())
+    }
 }
 
 impl From<Vec<u8>> for Body {
