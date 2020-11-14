@@ -218,10 +218,26 @@ impl StatusCategory {
 pub struct Meta(String);
 
 impl Meta {
+    /// Creates a new "Meta" string. Fails if `meta` contains `\n`.
     pub fn new(meta: impl AsRef<str> + Into<String>) -> Result<Self> {
         ensure!(!meta.as_ref().contains("\n"), "Meta must not contain newlines");
 
         Ok(Self(meta.into()))
+    }
+
+    /// Cretaes a new "Meta" string. Truncates `meta` to before the first occurrence of `\n`.
+    pub fn new_lossy(meta: impl AsRef<str> + Into<String>) -> Self {
+        let meta = meta.as_ref();
+        let newline_pos = meta.char_indices().position(|(_i, ch)| ch == '\n');
+
+        match newline_pos {
+            None => Self(meta.into()),
+            Some(newline_pos) => {
+                let meta = meta.get(..newline_pos).expect("northstar BUG");
+
+                Self(meta.into())
+            }
+        }
     }
 
     pub fn empty() -> Self {
@@ -327,5 +343,42 @@ impl<'a> From<&'a str> for Body {
 impl From<File> for Body {
     fn from(file: File) -> Self {
         Self::Reader(Box::new(file))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn meta_new_lossy_truncates() {
+        let meta = "foo\r\nbar\nquux";
+        let meta = Meta::new_lossy(meta);
+
+        assert_eq!(meta.as_str(), "foo\r");
+    }
+
+    #[test]
+    fn meta_new_lossy_no_truncate() {
+        let meta = "foo bar\r";
+        let meta = Meta::new_lossy(meta);
+
+        assert_eq!(meta.as_str(), "foo bar\r");
+    }
+
+    #[test]
+    fn meta_new_lossy_empty() {
+        let meta = "";
+        let meta = Meta::new_lossy(meta);
+
+        assert_eq!(meta.as_str(), "");
+    }
+
+        #[test]
+    fn meta_new_lossy_truncates_to_empty() {
+        let meta = "\n\n\n";
+        let meta = Meta::new_lossy(meta);
+
+        assert_eq!(meta.as_str(), "");
     }
 }
