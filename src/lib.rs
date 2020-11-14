@@ -2,7 +2,6 @@
 
 use std::{panic::AssertUnwindSafe, convert::TryFrom, io::BufReader, sync::Arc};
 use futures::{future::BoxFuture, FutureExt};
-use mime::Mime;
 use tokio::{
     prelude::*,
     io::{self, BufStream},
@@ -22,7 +21,6 @@ pub mod util;
 pub use mime;
 pub use uriparse as uri;
 pub use types::*;
-pub use rustls::Certificate;
 
 pub const REQUEST_URI_MAX_LEN: usize = 1024;
 pub const GEMINI_PORT: u16 = 1965;
