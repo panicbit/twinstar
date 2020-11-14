@@ -5,6 +5,8 @@ authors = ["panicbit <panicbit.dev@gmail.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
 description = "Gemini server implementation"
+repository = "https://github.com/panicbit/northstar"
+documentation = "https://docs.rs/northstar"
 
 [dependencies]
 anyhow = "1.0.33"
