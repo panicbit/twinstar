@@ -15,12 +15,12 @@ pub async fn serve_file<P: AsRef<Path>>(path: P, mime: &Mime) -> Result<Response
     let file = match File::open(path).await {
         Ok(file) => file,
         Err(err) => match err.kind() {
-            io::ErrorKind::NotFound => return Ok(Response::not_found()?),
+            io::ErrorKind::NotFound => return Ok(Response::not_found()),
             _ => return Err(err.into()),
         }
     };
 
-    Ok(Response::success(&mime)?.with_body(file))
+    Ok(Response::success(&mime).with_body(file))
 }
 
 pub async fn serve_dir<D: AsRef<Path>, P: AsRef<Path>>(dir: D, virtual_path: &[P]) -> Result<Response> {
@@ -35,7 +35,7 @@ pub async fn serve_dir<D: AsRef<Path>, P: AsRef<Path>>(dir: D, virtual_path: &[P
     let path = path.canonicalize()?;
 
     if !path.starts_with(&dir) {
-        return Ok(Response::not_found()?);
+        return Ok(Response::not_found());
     }
 
     if !path.is_dir() {
@@ -52,7 +52,7 @@ async fn serve_dir_listing<P: AsRef<Path>, B: AsRef<Path>>(path: P, virtual_path
     let mut dir = match fs::read_dir(path).await {
         Ok(dir) => dir,
         Err(err) => match err.kind() {
-            io::ErrorKind::NotFound => return Ok(Response::not_found()?),
+            io::ErrorKind::NotFound => return Ok(Response::not_found()),
             _ => return Err(err.into()),
         }
     };
@@ -82,7 +82,7 @@ async fn serve_dir_listing<P: AsRef<Path>, B: AsRef<Path>>(path: P, virtual_path
         )?;
     }
 
-    Ok(Response::success(&GEMINI_MIME)?.with_body(listing))
+    Ok(Response::success(&GEMINI_MIME).with_body(listing))
 }
 
 pub fn guess_mime_from_path<P: AsRef<Path>>(path: P) -> Mime {

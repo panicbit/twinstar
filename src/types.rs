@@ -88,11 +88,18 @@ impl ResponseHeader {
         })
     }
 
-    pub fn success(mime: &Mime) -> Result<Self> {
-        Ok(Self {
+    pub fn input_lossy(prompt: impl AsRef<str> + Into<String>) -> Self {
+        Self {
+            status: Status::INPUT,
+            meta: Meta::new_lossy(prompt),
+        }
+    }
+
+    pub fn success(mime: &Mime) -> Self {
+        Self {
             status: Status::SUCCESS,
-            meta: Meta::new(mime.to_string())?,
-        })
+            meta: Meta::new_lossy(mime.to_string()),
+        }
     }
 
     pub fn server_error(reason: impl AsRef<str> + Into<String>) -> Result<Self> {
@@ -102,25 +109,32 @@ impl ResponseHeader {
         })
     }
 
-    pub fn not_found() -> Result<Self> {
-        Ok(Self {
+    pub fn server_error_lossy(reason: impl AsRef<str> + Into<String>) -> Self {
+        Self {
+            status: Status::PERMANENT_FAILURE,
+            meta: Meta::new_lossy(reason),
+        }
+    }
+
+    pub fn not_found() -> Self {
+        Self {
             status: Status::NOT_FOUND,
-            meta: Meta::new("Not found")?,
-        })
+            meta: Meta::new_lossy("Not found"),
+        }
     }
 
-    pub fn client_certificate_required() -> Result<Self> {
-        Ok(Self {
+    pub fn client_certificate_required() -> Self {
+        Self {
             status: Status::CLIENT_CERTIFICATE_REQUIRED,
-            meta: Meta::new("No certificate provided")?,
-        })
+            meta: Meta::new_lossy("No certificate provided"),
+        }
     }
 
-    pub fn certificate_not_authorized() -> Result<Self> {
-        Ok(Self {
+    pub fn certificate_not_authorized() -> Self {
+        Self {
             status: Status::CERTIFICATE_NOT_AUTHORIZED,
-            meta: Meta::new("Your certificate is not authorized to view this content")?,
-        })
+            meta: Meta::new_lossy("Your certificate is not authorized to view this content"),
+        }
     }
 
     pub fn status(&self) -> &Status {
@@ -272,9 +286,14 @@ impl Response {
         Ok(Self::new(header))
     }
 
-    pub fn success(mime: &Mime) -> Result<Self> {
-        let header = ResponseHeader::success(&mime)?;
-        Ok(Self::new(header))
+    pub fn input_lossy(prompt: impl AsRef<str> + Into<String>) -> Self {
+        let header = ResponseHeader::input_lossy(prompt);
+        Self::new(header)
+    }
+
+    pub fn success(mime: &Mime) -> Self {
+        let header = ResponseHeader::success(&mime);
+        Self::new(header)
     }
 
     pub fn server_error(reason: impl AsRef<str> + Into<String>) -> Result<Self>  {
@@ -282,19 +301,19 @@ impl Response {
         Ok(Self::new(header))
     }
 
-    pub fn not_found() -> Result<Self> {
-        let header = ResponseHeader::not_found()?;
-        Ok(Self::new(header))
+    pub fn not_found() -> Self {
+        let header = ResponseHeader::not_found();
+        Self::new(header)
     }
 
-    pub fn client_certificate_required() -> Result<Self> {
-        let header = ResponseHeader::client_certificate_required()?;
-        Ok(Self::new(header))
+    pub fn client_certificate_required() -> Self {
+        let header = ResponseHeader::client_certificate_required();
+        Self::new(header)
     }
 
-    pub fn certificate_not_authorized() -> Result<Self> {
-        let header = ResponseHeader::certificate_not_authorized()?;
-        Ok(Self::new(header))
+    pub fn certificate_not_authorized() -> Self {
+        let header = ResponseHeader::certificate_not_authorized();
+        Self::new(header)
     }
 
     pub fn with_body(mut self, body: impl Into<Body>) -> Self {
