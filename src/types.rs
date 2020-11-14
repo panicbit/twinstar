@@ -88,11 +88,18 @@ impl ResponseHeader {
         })
     }
 
-    pub fn success(mime: &Mime) -> Result<Self> {
-        Ok(Self {
+    pub fn input_lossy(prompt: impl AsRef<str> + Into<String>) -> Self {
+        Self {
+            status: Status::INPUT,
+            meta: Meta::new_lossy(prompt),
+        }
+    }
+
+    pub fn success(mime: &Mime) -> Self {
+        Self {
             status: Status::SUCCESS,
-            meta: Meta::new(mime.to_string())?,
-        })
+            meta: Meta::new_lossy(mime.to_string()),
+        }
     }
 
     pub fn server_error(reason: impl AsRef<str> + Into<String>) -> Result<Self> {
@@ -102,25 +109,32 @@ impl ResponseHeader {
         })
     }
 
-    pub fn not_found() -> Result<Self> {
-        Ok(Self {
+    pub fn server_error_lossy(reason: impl AsRef<str> + Into<String>) -> Self {
+        Self {
+            status: Status::PERMANENT_FAILURE,
+            meta: Meta::new_lossy(reason),
+        }
+    }
+
+    pub fn not_found() -> Self {
+        Self {
             status: Status::NOT_FOUND,
-            meta: Meta::new("Not found")?,
-        })
+            meta: Meta::new_lossy("Not found"),
+        }
     }
 
-    pub fn client_certificate_required() -> Result<Self> {
-        Ok(Self {
+    pub fn client_certificate_required() -> Self {
+        Self {
             status: Status::CLIENT_CERTIFICATE_REQUIRED,
-            meta: Meta::new("No certificate provided")?,
-        })
+            meta: Meta::new_lossy("No certificate provided"),
+        }
     }
 
-    pub fn certificate_not_authorized() -> Result<Self> {
-        Ok(Self {
+    pub fn certificate_not_authorized() -> Self {
+        Self {
             status: Status::CERTIFICATE_NOT_AUTHORIZED,
-            meta: Meta::new("Your certificate is not authorized to view this content")?,
-        })
+            meta: Meta::new_lossy("Your certificate is not authorized to view this content"),
+        }
     }
 
     pub fn status(&self) -> &Status {
@@ -218,10 +232,32 @@ impl StatusCategory {
 pub struct Meta(String);
 
 impl Meta {
+    pub const MAX_LEN: usize = 1024;
+
+    /// Creates a new "Meta" string. Fails if `meta` contains `\n`.
     pub fn new(meta: impl AsRef<str> + Into<String>) -> Result<Self> {
         ensure!(!meta.as_ref().contains("\n"), "Meta must not contain newlines");
+        ensure!(meta.as_ref().len() <= Self::MAX_LEN, "Meta must not exceed {} bytes", Self::MAX_LEN);
 
         Ok(Self(meta.into()))
+    }
+
+    /// Cretaes a new "Meta" string. Truncates `meta` to before the first occurrence of `\n`.
+    pub fn new_lossy(meta: impl AsRef<str> + Into<String>) -> Self {
+        let meta = meta.as_ref();
+        let truncate_pos = meta.char_indices().position(|(i, ch)| {
+            let is_newline = ch == '\n';
+            let exceeds_limit = (i + ch.len_utf8()) > Self::MAX_LEN;
+
+            is_newline || exceeds_limit
+        });
+
+        let meta: String = match truncate_pos {
+            None => meta.into(),
+            Some(truncate_pos) => meta.get(..truncate_pos).expect("northstar BUG").into(),
+        };
+
+        Self(meta)
     }
 
     pub fn empty() -> Self {
@@ -256,9 +292,14 @@ impl Response {
         Ok(Self::new(header))
     }
 
-    pub fn success(mime: &Mime) -> Result<Self> {
-        let header = ResponseHeader::success(&mime)?;
-        Ok(Self::new(header))
+    pub fn input_lossy(prompt: impl AsRef<str> + Into<String>) -> Self {
+        let header = ResponseHeader::input_lossy(prompt);
+        Self::new(header)
+    }
+
+    pub fn success(mime: &Mime) -> Self {
+        let header = ResponseHeader::success(&mime);
+        Self::new(header)
     }
 
     pub fn server_error(reason: impl AsRef<str> + Into<String>) -> Result<Self>  {
@@ -266,19 +307,19 @@ impl Response {
         Ok(Self::new(header))
     }
 
-    pub fn not_found() -> Result<Self> {
-        let header = ResponseHeader::not_found()?;
-        Ok(Self::new(header))
+    pub fn not_found() -> Self {
+        let header = ResponseHeader::not_found();
+        Self::new(header)
     }
 
-    pub fn client_certificate_required() -> Result<Self> {
-        let header = ResponseHeader::client_certificate_required()?;
-        Ok(Self::new(header))
+    pub fn client_certificate_required() -> Self {
+        let header = ResponseHeader::client_certificate_required();
+        Self::new(header)
     }
 
-    pub fn certificate_not_authorized() -> Result<Self> {
-        let header = ResponseHeader::certificate_not_authorized()?;
-        Ok(Self::new(header))
+    pub fn certificate_not_authorized() -> Self {
+        let header = ResponseHeader::certificate_not_authorized();
+        Self::new(header)
     }
 
     pub fn with_body(mut self, body: impl Into<Body>) -> Self {
@@ -327,5 +368,87 @@ impl<'a> From<&'a str> for Body {
 impl From<File> for Body {
     fn from(file: File) -> Self {
         Self::Reader(Box::new(file))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::iter::repeat;
+
+    #[test]
+    fn meta_new_rejects_newlines() {
+        let meta = "foo\nbar";
+        let meta = Meta::new(meta);
+
+        assert!(meta.is_err());
+    }
+
+    #[test]
+    fn meta_new_accepts_max_len() {
+        let meta: String = repeat('x').take(Meta::MAX_LEN).collect();
+        let meta = Meta::new(meta);
+
+        assert!(meta.is_ok());
+    }
+
+    #[test]
+    fn meta_new_rejects_exceeding_max_len() {
+        let meta: String = repeat('x').take(Meta::MAX_LEN + 1).collect();
+        let meta = Meta::new(meta);
+
+        assert!(meta.is_err());
+    }
+
+    #[test]
+    fn meta_new_lossy_truncates() {
+        let meta = "foo\r\nbar\nquux";
+        let meta = Meta::new_lossy(meta);
+
+        assert_eq!(meta.as_str(), "foo\r");
+    }
+
+    #[test]
+    fn meta_new_lossy_no_truncate() {
+        let meta = "foo bar\r";
+        let meta = Meta::new_lossy(meta);
+
+        assert_eq!(meta.as_str(), "foo bar\r");
+    }
+
+    #[test]
+    fn meta_new_lossy_empty() {
+        let meta = "";
+        let meta = Meta::new_lossy(meta);
+
+        assert_eq!(meta.as_str(), "");
+    }
+
+    #[test]
+    fn meta_new_lossy_truncates_to_empty() {
+        let meta = "\n\n\n";
+        let meta = Meta::new_lossy(meta);
+
+        assert_eq!(meta.as_str(), "");
+    }
+
+    #[test]
+    fn meta_new_lossy_truncates_to_max_len() {
+        let meta: String = repeat('x').take(Meta::MAX_LEN + 1).collect();
+        let meta = Meta::new_lossy(meta);
+
+        assert_eq!(meta.as_str().len(), Meta::MAX_LEN);
+    }
+
+    #[test]
+    fn meta_new_lossy_truncates_multi_byte_sequences() {
+        let mut meta: String = repeat('x').take(Meta::MAX_LEN - 1).collect();
+        meta.push('🦀');
+
+        assert_eq!(meta.len(), Meta::MAX_LEN + 3);
+
+        let meta = Meta::new_lossy(meta);
+
+        assert_eq!(meta.as_str().len(), Meta::MAX_LEN - 1);
     }
 }

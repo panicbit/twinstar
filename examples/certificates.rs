@@ -32,7 +32,7 @@ fn handle_request(users: Arc<RwLock<HashMap<CertBytes, String>>>, request: Reque
             if let Some(user) = users_read.get(cert_bytes) {
                 // The user has already registered
                 Ok(
-                    Response::success(&GEMINI_MIME)?
+                    Response::success(&GEMINI_MIME)
                         .with_body(format!("Welcome {}!", user))
                 )
             } else {
@@ -44,7 +44,7 @@ fn handle_request(users: Arc<RwLock<HashMap<CertBytes, String>>>, request: Reque
                     let mut users_write = users.write().await;
                     users_write.insert(cert_bytes.clone(), username.to_owned());
                     Ok(
-                        Response::success(&GEMINI_MIME)?
+                        Response::success(&GEMINI_MIME)
                             .with_body(format!(
                                 "Your account has been created {}!  Welcome!",
                                 username
@@ -57,7 +57,7 @@ fn handle_request(users: Arc<RwLock<HashMap<CertBytes, String>>>, request: Reque
             }
         } else {
             // The user didn't provide a certificate
-            Response::client_certificate_required()
+            Ok(Response::client_certificate_required())
         }
     }.boxed()
 }
