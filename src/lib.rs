@@ -44,22 +44,25 @@ impl Server {
 
     async fn serve(self) -> Result<()> {
         loop {
-            let (stream, _addr) = self.listener.accept().await?;
+            let (stream, _addr) = self.listener.accept().await
+                .context("Failed to accept client")?;
             let this = self.clone();
 
             tokio::spawn(async move {
                 if let Err(err) = this.serve_client(stream).await {
-                    error!("{}", err);
+                    error!("{:?}", err);
                 }
             });
         }
     }
 
     async fn serve_client(self, stream: TcpStream) -> Result<()> {
-        let stream = self.tls_acceptor.accept(stream).await?;
+        let stream = self.tls_acceptor.accept(stream).await
+            .context("Failed to establish TLS session")?;
         let mut stream = BufStream::new(stream);
 
-        let mut request = receive_request(&mut stream).await?;
+        let mut request = receive_request(&mut stream).await
+            .context("Failed to receive request")?;
         debug!("Client requested: {}", request.uri());
 
         // Identify the client certificate from the tls stream.  This is the first
@@ -78,13 +81,16 @@ impl Server {
         let response = handler.catch_unwind().await
             .unwrap_or_else(|_| Response::server_error(""))
             .or_else(|err| {
-                error!("Handler: {}", err);
+                error!("Handler failed: {:?}", err);
                 Response::server_error("")
-            })?;
+            })
+            .context("Request handler failed")?;
 
-        send_response(response, &mut stream).await?;
+        send_response(response, &mut stream).await
+            .context("Failed to send response")?;
 
-        stream.flush().await?;
+        stream.flush().await
+            .context("Failed to flush response data")?;
 
         Ok(())
     }
@@ -103,11 +109,15 @@ impl<A: ToSocketAddrs> Builder<A> {
     where
         F: Fn(Request) -> HandlerResponse + Send + Sync + 'static,
     {
-        let config = tls_config()?;
+        let config = tls_config()
+            .context("Failed to create TLS config")?;
+
+        let listener = TcpListener::bind(self.addr).await
+            .context("Failed to create socket")?;
 
         let server = Server {
             tls_acceptor: TlsAcceptor::from(config),
-            listener: Arc::new(TcpListener::bind(self.addr).await?),
+            listener: Arc::new(listener),
             handler: Arc::new(handler),
         };
 
@@ -134,17 +144,22 @@ async fn receive_request(stream: &mut (impl AsyncBufRead + Unpin)) -> Result<Req
     uri.pop();
     uri.pop();
 
-    let uri = URIReference::try_from(&*uri)?.into_owned();
-    let request = Request::from_uri(uri)?;
+    let uri = URIReference::try_from(&*uri)
+        .context("Request URI is invalid")?
+        .into_owned();
+    let request = Request::from_uri(uri)
+        .context("Failed to create request from URI")?;
 
     Ok(request)
 }
 
 async fn send_response(mut response: Response, stream: &mut (impl AsyncWrite + Unpin)) -> Result<()> {
-    send_response_header(response.header(), stream).await?;
+    send_response_header(response.header(), stream).await
+        .context("Failed to send response header")?;
 
     if let Some(body) = response.take_body() {
-        send_response_body(body, stream).await?;
+        send_response_body(body, stream).await
+            .context("Failed to send response body")?;
     }
 
     Ok(())
@@ -174,26 +189,34 @@ async fn send_response_body(body: Body, stream: &mut (impl AsyncWrite + Unpin)) 
 fn tls_config() -> Result<Arc<ServerConfig>> {
     let mut config = ServerConfig::new(AllowAnonOrSelfsignedClient::new());
 
-    let cert_chain = load_cert_chain()?;
-    let key = load_key()?;
-    config.set_single_cert(cert_chain, key)?;
+    let cert_chain = load_cert_chain()
+        .context("Failed to load TLS certificate")?;
+    let key = load_key()
+        .context("Failed to load TLS key")?;
+    config.set_single_cert(cert_chain, key)
+        .context("Failed to use loaded TLS certificate")?;
 
     Ok(config.into())
 }
 
 fn load_cert_chain() -> Result<Vec<Certificate>> {
-    let certs = std::fs::File::open("cert/cert.pem")?;
+    let cert_path = "cert/cert.pem";
+    let certs = std::fs::File::open(cert_path)
+        .with_context(|| format!("Failed to open `{}`", cert_path))?;
     let mut certs = BufReader::new(certs);
     let certs = rustls::internal::pemfile::certs(&mut certs)
-        .map_err(|_| anyhow!("failed to load certs"))?;
+        .map_err(|_| anyhow!("failed to load certs `{}`", cert_path))?;
 
     Ok(certs)
 }
 
 fn load_key() -> Result<PrivateKey> {
-    let mut keys = BufReader::new(std::fs::File::open("cert/key.pem")?);
+    let key_path = "cert/key.pem";
+    let keys = std::fs::File::open(key_path)
+        .with_context(|| format!("Failed to open `{}`", key_path))?;
+    let mut keys = BufReader::new(keys);
     let mut keys = rustls::internal::pemfile::pkcs8_private_keys(&mut keys)
-        .map_err(|_| anyhow!("failed to load key"))?;
+        .map_err(|_| anyhow!("failed to load key `{}`", key_path))?;
 
     ensure!(!keys.is_empty(), "no key found");
 

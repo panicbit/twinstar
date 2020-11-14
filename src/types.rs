@@ -27,7 +27,8 @@ impl Request {
             None => None,
             Some(query) => {
                 let input = percent_decode_str(query.as_str())
-                    .decode_utf8()?
+                    .decode_utf8()
+                    .context("Request URI query contains invalid UTF-8")?
                     .into_owned();
                 Some(input)
             }
@@ -84,7 +85,7 @@ impl ResponseHeader {
     pub fn input(prompt: impl AsRef<str> + Into<String>) -> Result<Self> {
         Ok(Self {
             status: Status::INPUT,
-            meta: Meta::new(prompt)?,
+            meta: Meta::new(prompt).context("Invalid input prompt")?,
         })
     }
 
@@ -105,7 +106,7 @@ impl ResponseHeader {
     pub fn server_error(reason: impl AsRef<str> + Into<String>) -> Result<Self> {
         Ok(Self {
             status: Status::PERMANENT_FAILURE,
-            meta: Meta::new(reason)?,
+            meta: Meta::new(reason).context("Invalid server error reason")?,
         })
     }
 
@@ -269,7 +270,8 @@ impl Meta {
     }
 
     pub fn to_mime(&self) -> Result<Mime> {
-        let mime = self.as_str().parse::<Mime>()?;
+        let mime = self.as_str().parse::<Mime>()
+            .context("Meta is not a valid MIME")?;
         Ok(mime)
     }
 }
