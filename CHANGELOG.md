@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - `GEMINI_MIME_STR`, the `&str` representation of the Gemini MIME
-- `Meta::new_lossy` constructor that never fails
+- `Meta::new_lossy`, constructor that never fails
 - `Meta::MAX_LEN`, which is `1024`
 - "lossy" constructors for `Response` and `Status` (see `Meta::new_lossy`)
 
