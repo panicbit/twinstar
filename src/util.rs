@@ -102,3 +102,19 @@ pub fn guess_mime_from_path<P: AsRef<Path>>(path: P) -> Mime {
     
     mime.parse::<Mime>().unwrap_or(mime::APPLICATION_OCTET_STREAM)
 }
+
+/// A convenience trait alias for `AsRef<T> + Into<T::Owned>`,
+/// most commonly used to accept `&str` or `String`:
+///
+/// `Cowy<str>` ⇔ `AsRef<str> + Into<String>`
+pub trait Cowy<T>
+where
+    Self: AsRef<T> + Into<T::Owned>,
+    T: ToOwned + ?Sized,
+{}
+
+impl<C, T> Cowy<T> for C
+where
+    C: AsRef<T> + Into<T::Owned>,
+    T: ToOwned + ?Sized,
+{}

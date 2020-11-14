@@ -3,6 +3,7 @@ use std::fmt;
 
 use itertools::Itertools;
 use crate::types::URIReference;
+use crate::util::Cowy;
 
 #[derive(Default)]
 pub struct Document {
@@ -42,7 +43,7 @@ impl Document {
         self
     }
 
-    pub fn add_link<'a, U>(&mut self, uri: U, label: impl AsRef<str> + Into<String>) -> &mut Self
+    pub fn add_link<'a, U>(&mut self, uri: U, label: impl Cowy<str>) -> &mut Self
     where
         U: TryInto<URIReference<'a>>,
     {
@@ -92,7 +93,7 @@ impl Document {
         self
     }
 
-    pub fn add_heading(&mut self, level: HeadingLevel, text: impl AsRef<str> + Into<String>) -> &mut Self {
+    pub fn add_heading(&mut self, level: HeadingLevel, text: impl Cowy<str>) -> &mut Self {
         let text = HeadingText::new_lossy(text);
         let heading = Heading {
             level,
@@ -182,7 +183,7 @@ impl Text {
         Self::default()
     }
 
-    pub fn new_lossy(line: impl AsRef<str> + Into<String>) -> Self {
+    pub fn new_lossy(line: impl Cowy<str>) -> Self {
         Self(lossy_escaped_line(line, SPECIAL_STARTS))
     }
 }
@@ -195,7 +196,7 @@ pub struct Link {
 pub struct LinkLabel(String);
 
 impl LinkLabel {
-    pub fn from_lossy(line: impl AsRef<str> + Into<String>) -> Self {
+    pub fn from_lossy(line: impl Cowy<str>) -> Self {
         let line = strip_newlines(line);
         
         LinkLabel(line)
@@ -210,7 +211,7 @@ pub struct Preformatted {
 pub struct PreformattedText(String);
 
 impl PreformattedText {
-    pub fn new_lossy(line: impl AsRef<str> + Into<String>) -> Self {
+    pub fn new_lossy(line: impl Cowy<str>) -> Self {
         Self(lossy_escaped_line(line, &[PREFORMATTED_TOGGLE_START]))
     }
 }
@@ -248,7 +249,7 @@ impl Heading {
 pub struct HeadingText(String);
 
 impl HeadingText {
-    pub fn new_lossy(line: impl AsRef<str> + Into<String>) -> Self {
+    pub fn new_lossy(line: impl Cowy<str>) -> Self {
         let line = strip_newlines(line);
 
         Self(lossy_escaped_line(line, &[HEADING_START]))
@@ -298,7 +299,7 @@ fn starts_with_any(s: &str, starts: &[&str]) -> bool {
     false
 }
 
-fn lossy_escaped_line(line: impl AsRef<str> + Into<String>, escape_starts: &[&str]) -> String {
+fn lossy_escaped_line(line: impl Cowy<str>, escape_starts: &[&str]) -> String {
     let line_ref = line.as_ref();
     let contains_newline = line_ref.contains('\n');
     let has_special_start = starts_with_any(line_ref, escape_starts);
@@ -320,7 +321,7 @@ fn lossy_escaped_line(line: impl AsRef<str> + Into<String>, escape_starts: &[&st
     line
 }
 
-fn strip_newlines(text: impl AsRef<str> + Into<String>) -> String {
+fn strip_newlines(text: impl Cowy<str>) -> String {
     if !text.as_ref().contains(&['\r', '\n'][..]) {
         return text.into();
     }

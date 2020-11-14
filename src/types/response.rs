@@ -1,5 +1,6 @@
 use anyhow::*;
 use crate::types::{ResponseHeader, Body, Mime, Document};
+use crate::util::Cowy;
 use crate::GEMINI_MIME;
 
 pub struct Response {
@@ -19,12 +20,12 @@ impl Response {
         Self::success(&GEMINI_MIME).with_body(document)
     }
 
-    pub fn input(prompt: impl AsRef<str> + Into<String>) -> Result<Self> {
+    pub fn input(prompt: impl Cowy<str>) -> Result<Self> {
         let header = ResponseHeader::input(prompt)?;
         Ok(Self::new(header))
     }
 
-    pub fn input_lossy(prompt: impl AsRef<str> + Into<String>) -> Self {
+    pub fn input_lossy(prompt: impl Cowy<str>) -> Self {
         let header = ResponseHeader::input_lossy(prompt);
         Self::new(header)
     }
@@ -34,7 +35,7 @@ impl Response {
         Self::new(header)
     }
 
-    pub fn server_error(reason: impl AsRef<str> + Into<String>) -> Result<Self>  {
+    pub fn server_error(reason: impl Cowy<str>) -> Result<Self>  {
         let header = ResponseHeader::server_error(reason)?;
         Ok(Self::new(header))
     }
