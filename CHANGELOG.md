@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - "lossy" constructors for `Response` and `Status` (see `Meta::new_lossy`)
 
 ### Changed
-- `Meta::new` rejects strings exceeding `Meta::MAX_LEN` (`1024`)
+- `Meta::new` now rejects strings exceeding `Meta::MAX_LEN` (`1024`)
 - Some `Response` and `Status` constructors are now infallible
 - Improve error messages
 
