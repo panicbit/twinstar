@@ -6,7 +6,7 @@ use tokio::{
     fs::{self, File},
     io,
 };
-use crate::{GEMINI_MIME, Response, gemini_mime};
+use crate::{GEMINI_MIME, GEMINI_MIME_STR, Response};
 use itertools::Itertools;
 
 pub async fn serve_file<P: AsRef<Path>>(path: P, mime: &Mime) -> Result<Response> {
@@ -82,7 +82,7 @@ async fn serve_dir_listing<P: AsRef<Path>, B: AsRef<Path>>(path: P, virtual_path
         )?;
     }
 
-    Ok(Response::success(&gemini_mime()?)?.with_body(listing))
+    Ok(Response::success(&GEMINI_MIME)?.with_body(listing))
 }
 
 pub fn guess_mime_from_path<P: AsRef<Path>>(path: P) -> Mime {
@@ -90,7 +90,7 @@ pub fn guess_mime_from_path<P: AsRef<Path>>(path: P) -> Mime {
     let extension = path.extension().and_then(|s| s.to_str());
     let mime = match extension {
         Some(extension) => match extension {
-            "gemini" => GEMINI_MIME,
+            "gemini" => GEMINI_MIME_STR,
             "txt" => "text/plain",
             "jpeg" | "jpg" | "jpe" => "image/jpeg",
             "png" => "image/png",
