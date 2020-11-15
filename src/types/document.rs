@@ -42,7 +42,7 @@ impl Document {
     ///
     /// assert_eq!(document.to_string(), "foo\n");
     /// ```
-    pub fn add_item(&mut self, item: Item) -> &mut Self {
+    fn add_item(&mut self, item: Item) -> &mut Self {
         self.items.push(item);
         self
     }
@@ -66,7 +66,7 @@ impl Document {
     ///
     /// assert_eq!(document.to_string(), "foo\nbar\nbaz\n");
     /// ```
-    pub fn add_items<I>(&mut self, items: I) -> &mut Self
+    fn add_items<I>(&mut self, items: I) -> &mut Self
     where
         I: IntoIterator<Item = Item>,
     {
@@ -350,7 +350,7 @@ impl fmt::Display for Document {
     }
 }
 
-pub enum Item {
+enum Item {
     Text(Text),
     Link(Link),
     Preformatted(Preformatted),
@@ -360,59 +360,59 @@ pub enum Item {
 }
 
 #[derive(Default)]
-pub struct Text(String);
+struct Text(String);
 
 impl Text {
-    pub fn blank() -> Self {
+    fn blank() -> Self {
         Self::default()
     }
 
-    pub fn new_lossy(line: impl Cowy<str>) -> Self {
+    fn new_lossy(line: impl Cowy<str>) -> Self {
         Self(lossy_escaped_line(line, SPECIAL_STARTS))
     }
 }
 
-pub struct Link {
-    pub uri: URIReference<'static>,
-    pub label: Option<LinkLabel>,
+struct Link {
+    uri: URIReference<'static>,
+    label: Option<LinkLabel>,
 }
 
-pub struct LinkLabel(String);
+struct LinkLabel(String);
 
 impl LinkLabel {
-    pub fn from_lossy(line: impl Cowy<str>) -> Self {
+    fn from_lossy(line: impl Cowy<str>) -> Self {
         let line = strip_newlines(line);
 
         LinkLabel(line)
     }
 }
 
-pub struct Preformatted {
-    pub alt: AltText,
-    pub lines: Vec<PreformattedText>,
+struct Preformatted {
+    alt: AltText,
+    lines: Vec<PreformattedText>,
 }
 
-pub struct PreformattedText(String);
+struct PreformattedText(String);
 
 impl PreformattedText {
-    pub fn new_lossy(line: impl Cowy<str>) -> Self {
+    fn new_lossy(line: impl Cowy<str>) -> Self {
         Self(lossy_escaped_line(line, &[PREFORMATTED_TOGGLE_START]))
     }
 }
 
-pub struct AltText(String);
+struct AltText(String);
 
 impl AltText {
-    pub fn new_lossy(alt: &str) -> Self {
+    fn new_lossy(alt: &str) -> Self {
         let alt = strip_newlines(alt);
 
         Self(alt)
     }
 }
 
-pub struct Heading {
-    pub level: HeadingLevel,
-    pub text: HeadingText,
+struct Heading {
+    level: HeadingLevel,
+    text: HeadingText,
 }
 
 pub enum HeadingLevel {
@@ -422,7 +422,7 @@ pub enum HeadingLevel {
 }
 
 impl Heading {
-    pub fn new_lossy(level: HeadingLevel, line: &str) -> Self {
+    fn new_lossy(level: HeadingLevel, line: &str) -> Self {
         Self {
             level,
             text: HeadingText::new_lossy(line),
@@ -430,30 +430,30 @@ impl Heading {
     }
 }
 
-pub struct HeadingText(String);
+struct HeadingText(String);
 
 impl HeadingText {
-    pub fn new_lossy(line: impl Cowy<str>) -> Self {
+    fn new_lossy(line: impl Cowy<str>) -> Self {
         let line = strip_newlines(line);
 
         Self(line)
     }
 }
 
-pub struct UnorderedListItem(String);
+struct UnorderedListItem(String);
 
 impl UnorderedListItem {
-    pub fn new_lossy(text: &str) -> Self {
+    fn new_lossy(text: &str) -> Self {
         let text = strip_newlines(text);
 
         Self(text)
     }
 }
 
-pub struct Quote(String);
+struct Quote(String);
 
 impl Quote {
-    pub fn new_lossy(text: &str) -> Self {
+    fn new_lossy(text: &str) -> Self {
         Self(lossy_escaped_line(text, &[QUOTE_START]))
     }
 }
