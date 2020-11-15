@@ -1,3 +1,41 @@
+//! Provides types for creating Gemini Documents.
+//!
+//! The module is centered around the `Document` type,
+//! which provides all the necessary methods for programatically
+//! creation of Gemini documents.
+//!
+//! # Examples
+//!
+//! ```
+//! use northstar::document::HeadingLevel::*;
+//!
+//! let mut document = northstar::Document::new();
+//!
+//! document.add_heading(H1, "Heading 1");
+//! document.add_heading(H2, "Heading 2");
+//! document.add_heading(H3, "Heading 3");
+//! document.add_blank_line();
+//! document.add_text("text");
+//! document.add_link("gemini://gemini.circumlunar.space", "Project Gemini");
+//! document.add_unordered_list_item("list item");
+//! document.add_quote("quote");
+//! document.add_preformatted("preformatted");
+//!
+//! assert_eq!(document.to_string(), "\
+//!     ## Heading 1\n\
+//!     ### Heading 2\n\
+//!     #### Heading 3\n\
+//!     \n\
+//!     text\n\
+//!     => gemini://gemini.circumlunar.space/ Project Gemini\n\
+//!     * list item\n\
+//!     > quote\n\
+//!     ```\n\
+//!     preformatted\n\
+//!     ```\n\
+//! ");
+//! ```
+#![warn(missing_docs)]
 use std::convert::TryInto;
 use std::fmt;
 
@@ -6,6 +44,10 @@ use crate::types::URIReference;
 use crate::util::Cowy;
 
 #[derive(Default)]
+/// Represents a Gemini document.
+///
+/// Provides convenient methods for programatically
+/// creation of Gemini documents.
 pub struct Document {
     items: Vec<Item>,
 }
@@ -31,7 +73,7 @@ impl Document {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```compile_fail
     /// use northstar::document::{Document, Item, Text};
     ///
     /// let mut document = Document::new();
@@ -53,7 +95,7 @@ impl Document {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```compile_fail
     /// use northstar::document::{Document, Item, Text};
     ///
     /// let mut document = Document::new();
@@ -415,9 +457,13 @@ struct Heading {
     text: HeadingText,
 }
 
+/// The level of a heading.
 pub enum HeadingLevel {
+    /// Heading level 1 (`#`)
     H1,
+    /// Heading level 2 (`##`)
     H2,
+    /// Heading level 3 (`###`)
     H3,
 }
 
