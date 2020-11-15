@@ -467,15 +467,6 @@ pub enum HeadingLevel {
     H3,
 }
 
-impl Heading {
-    fn new_lossy(level: HeadingLevel, line: &str) -> Self {
-        Self {
-            level,
-            text: HeadingText::new_lossy(line),
-        }
-    }
-}
-
 struct HeadingText(String);
 
 impl HeadingText {
