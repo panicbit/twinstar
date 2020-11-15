@@ -11,15 +11,61 @@ pub struct Document {
 }
 
 impl Document {
+    /// Creates an empty Gemini `Document`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let document = northstar::Document::new();
+    ///
+    /// assert_eq!(document.to_string(), "");
+    /// ```
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Adds an `item` to the document.
+    ///
+    /// An `item` usually corresponds to a single line,
+    /// except in the case of preformatted text.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use northstar::document::{Document, Item, Text};
+    ///
+    /// let mut document = Document::new();
+    /// let text = Text::new_lossy("foo");
+    /// let item = Item::Text(text);
+    ///
+    /// document.add_item(item);
+    ///
+    /// assert_eq!(document.to_string(), "foo\n");
+    /// ```
     pub fn add_item(&mut self, item: Item) -> &mut Self {
         self.items.push(item);
         self
     }
 
+    /// Adds multiple `items` to the document.
+    ///
+    /// This is a convenience wrapper around `add_item`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use northstar::document::{Document, Item, Text};
+    ///
+    /// let mut document = Document::new();
+    /// let items = vec!["foo", "bar", "baz"]
+    ///     .into_iter()
+    ///     .map(Text::new_lossy)
+    ///     .map(Item::Text);
+    ///
+    /// document.add_items(items);
+    ///
+    /// assert_eq!(document.to_string(), "foo\nbar\nbaz\n");
+    /// ```
     pub fn add_items<I>(&mut self, items: I) -> &mut Self
     where
         I: IntoIterator<Item = Item>,
@@ -28,10 +74,38 @@ impl Document {
         self
     }
 
+    /// Adds a blank line to the document.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut document = northstar::Document::new();
+    ///
+    /// document.add_blank_line();
+    ///
+    /// assert_eq!(document.to_string(), "\n");
+    /// ```
     pub fn add_blank_line(&mut self) -> &mut Self {
         self.add_item(Item::Text(Text::blank()))
     }
 
+    /// Adds plain text to the document.
+    ///
+    /// This function allows adding multiple lines at once.
+    ///
+    /// It inserts a whitespace at the beginning of a line
+    /// if it starts with a character sequence that
+    /// would make it a non-plain text line (e.g. link, heading etc).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut document = northstar::Document::new();
+    ///
+    /// document.add_text("hello\n* world!");
+    ///
+    /// assert_eq!(document.to_string(), "hello\n * world!\n");
+    /// ```
     pub fn add_text(&mut self, text: &str) -> &mut Self {
         let text = text
             .lines()
@@ -43,6 +117,22 @@ impl Document {
         self
     }
 
+    /// Adds a link to the document.
+    ///
+    /// `uri`s that fail to parse are substituted with `.`.
+    ///
+    /// Consecutive newlines in `label` will be replaced
+    /// with a single whitespace.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut document = northstar::Document::new();
+    ///
+    /// document.add_link("https://wikipedia.org", "Wiki\n\nWiki");
+    ///
+    /// assert_eq!(document.to_string(), "=> https://wikipedia.org/ Wiki Wiki\n");
+    /// ```
     pub fn add_link<'a, U>(&mut self, uri: U, label: impl Cowy<str>) -> &mut Self
     where
         U: TryInto<URIReference<'a>>,
@@ -68,7 +158,7 @@ impl Document {
         let link = Item::Link(link);
 
         self.add_item(link);
-    
+
         self
     }
 
@@ -120,7 +210,7 @@ impl Document {
             .lines()
             .map(Quote::new_lossy)
             .map(Item::Quote);
-        
+
         self.add_items(quote);
 
         self
@@ -137,7 +227,7 @@ impl fmt::Display for Document {
                     let label = link.label.as_ref().map(|label| label.0.as_str())
                         .unwrap_or("");
 
-                    writeln!(f, "=>{}{}{}", link.uri, separator, label)?;
+                    writeln!(f, "=> {}{}{}", link.uri, separator, label)?;
                 }
                 Item::Preformatted(preformatted) => {
                     writeln!(f, "```{}", preformatted.alt.0)?;
@@ -198,7 +288,7 @@ pub struct LinkLabel(String);
 impl LinkLabel {
     pub fn from_lossy(line: impl Cowy<str>) -> Self {
         let line = strip_newlines(line);
-        
+
         LinkLabel(line)
     }
 }
@@ -221,7 +311,7 @@ pub struct AltText(String);
 impl AltText {
     pub fn new_lossy(alt: &str) -> Self {
         let alt = strip_newlines(alt);
-        
+
         Self(alt)
     }
 }
@@ -261,7 +351,7 @@ pub struct UnorderedListItem(String);
 impl UnorderedListItem {
     pub fn new_lossy(text: &str) -> Self {
         let text = strip_newlines(text);
-        
+
         Self(text)
     }
 }

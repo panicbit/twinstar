@@ -99,7 +99,7 @@ pub fn guess_mime_from_path<P: AsRef<Path>>(path: P) -> Mime {
         },
         None => "application/octet-stream",
     };
-    
+
     mime.parse::<Mime>().unwrap_or(mime::APPLICATION_OCTET_STREAM)
 }
 
