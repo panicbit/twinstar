@@ -1,5 +1,6 @@
 pub use ::mime::Mime;
 pub use rustls::Certificate;
+pub use uriparse::URIReference;
 
 mod meta;
 pub use self::meta::Meta;
@@ -18,3 +19,6 @@ pub use response::Response;
 
 mod body;
 pub use body::Body;
+
+pub mod document;
+pub use document::Document;

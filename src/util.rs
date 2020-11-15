@@ -1,12 +1,12 @@
 use std::path::Path;
 use mime::Mime;
-use percent_encoding::utf8_percent_encode;
 use anyhow::*;
 use tokio::{
     fs::{self, File},
     io,
 };
-use crate::{GEMINI_MIME, GEMINI_MIME_STR, Response};
+use crate::GEMINI_MIME_STR;
+use crate::types::{Response, Document, document::HeadingLevel::*};
 use itertools::Itertools;
 
 pub async fn serve_file<P: AsRef<Path>>(path: P, mime: &Mime) -> Result<Response> {
@@ -49,8 +49,6 @@ pub async fn serve_dir<D: AsRef<Path>, P: AsRef<Path>>(dir: D, virtual_path: &[P
 }
 
 async fn serve_dir_listing<P: AsRef<Path>, B: AsRef<Path>>(path: P, virtual_path: &[B]) -> Result<Response> {
-    use std::fmt::Write;
-
     let mut dir = match fs::read_dir(path).await {
         Ok(dir) => dir,
         Err(err) => match err.kind() {
@@ -60,13 +58,13 @@ async fn serve_dir_listing<P: AsRef<Path>, B: AsRef<Path>>(path: P, virtual_path
     };
 
     let breadcrumbs = virtual_path.iter().map(|segment| segment.as_ref().display()).join("/");
-    let mut listing = String::new();
-    
-    writeln!(listing, "# Index of /{}", breadcrumbs)?;
-    writeln!(listing)?;
+    let mut document = Document::new();
+
+    document.add_heading(H1, format!("Index of /{}", breadcrumbs));
+    document.add_blank_line();
 
     if virtual_path.get(0).map(<_>::as_ref) != Some(Path::new("")) {
-        writeln!(listing, "=> .. 📁 ../")?;
+        document.add_link("..", "📁 ../");
     }
 
     while let Some(entry) = dir.next_entry().await.context("Failed to list directory")? {
@@ -75,18 +73,17 @@ async fn serve_dir_listing<P: AsRef<Path>, B: AsRef<Path>>(path: P, virtual_path
         let is_dir = entry.file_type().await
             .with_context(|| format!("Failed to get file type of `{}`", entry.path().display()))?
             .is_dir();
+        let trailing_slash = if is_dir { "/" } else { "" };
+        let uri = format!("./{}{}", file_name, trailing_slash);
 
-        writeln!(
-            listing,
-            "=> {link}{trailing_slash} {icon} {name}{trailing_slash}",
+        document.add_link(uri.as_str(), format!("{icon} {name}{trailing_slash}",
             icon = if is_dir { '📁' } else { '📄' },
-            link = utf8_percent_encode(&file_name, percent_encoding::NON_ALPHANUMERIC),
-            trailing_slash = if is_dir { "/" } else { "" },
             name = file_name,
-        )?;
+            trailing_slash = trailing_slash
+        ));
     }
 
-    Ok(Response::success(&GEMINI_MIME).with_body(listing))
+    Ok(Response::document(document))
 }
 
 pub fn guess_mime_from_path<P: AsRef<Path>>(path: P) -> Mime {
@@ -102,6 +99,22 @@ pub fn guess_mime_from_path<P: AsRef<Path>>(path: P) -> Mime {
         },
         None => "application/octet-stream",
     };
-    
+
     mime.parse::<Mime>().unwrap_or(mime::APPLICATION_OCTET_STREAM)
 }
+
+/// A convenience trait alias for `AsRef<T> + Into<T::Owned>`,
+/// most commonly used to accept `&str` or `String`:
+///
+/// `Cowy<str>` ⇔ `AsRef<str> + Into<String>`
+pub trait Cowy<T>
+where
+    Self: AsRef<T> + Into<T::Owned>,
+    T: ToOwned + ?Sized,
+{}
+
+impl<C, T> Cowy<T> for C
+where
+    C: AsRef<T> + Into<T::Owned>,
+    T: ToOwned + ?Sized,
+{}

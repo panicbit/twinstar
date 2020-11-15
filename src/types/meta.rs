@@ -1,5 +1,7 @@
 use anyhow::*;
-use mime::Mime;
+use crate::Mime;
+use crate::util::Cowy;
+
 
 #[derive(Debug,Clone,PartialEq,Eq,Default)]
 pub struct Meta(String);
@@ -9,7 +11,7 @@ impl Meta {
 
     /// Creates a new "Meta" string.
     /// Fails if `meta` contains `\n`.
-    pub fn new(meta: impl AsRef<str> + Into<String>) -> Result<Self> {
+    pub fn new(meta: impl Cowy<str>) -> Result<Self> {
         ensure!(!meta.as_ref().contains("\n"), "Meta must not contain newlines");
         ensure!(meta.as_ref().len() <= Self::MAX_LEN, "Meta must not exceed {} bytes", Self::MAX_LEN);
 
@@ -20,7 +22,7 @@ impl Meta {
     /// Truncates `meta` to before:
     /// - the first occurrence of `\n`
     /// - the character that makes `meta` exceed `Meta::MAX_LEN`
-    pub fn new_lossy(meta: impl AsRef<str> + Into<String>) -> Self {
+    pub fn new_lossy(meta: impl Cowy<str>) -> Self {
         let meta = meta.as_ref();
         let truncate_pos = meta.char_indices().position(|(i, ch)| {
             let is_newline = ch == '\n';

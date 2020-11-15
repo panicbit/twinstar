@@ -1,5 +1,6 @@
 use anyhow::*;
-use mime::Mime;
+use crate::Mime;
+use crate::util::Cowy;
 use crate::types::{Status, Meta};
 
 #[derive(Debug,Clone)]
@@ -9,14 +10,14 @@ pub struct ResponseHeader {
 }
 
 impl ResponseHeader {
-    pub fn input(prompt: impl AsRef<str> + Into<String>) -> Result<Self> {
+    pub fn input(prompt: impl Cowy<str>) -> Result<Self> {
         Ok(Self {
             status: Status::INPUT,
             meta: Meta::new(prompt).context("Invalid input prompt")?,
         })
     }
 
-    pub fn input_lossy(prompt: impl AsRef<str> + Into<String>) -> Self {
+    pub fn input_lossy(prompt: impl Cowy<str>) -> Self {
         Self {
             status: Status::INPUT,
             meta: Meta::new_lossy(prompt),
@@ -30,14 +31,14 @@ impl ResponseHeader {
         }
     }
 
-    pub fn server_error(reason: impl AsRef<str> + Into<String>) -> Result<Self> {
+    pub fn server_error(reason: impl Cowy<str>) -> Result<Self> {
         Ok(Self {
             status: Status::PERMANENT_FAILURE,
             meta: Meta::new(reason).context("Invalid server error reason")?,
         })
     }
 
-    pub fn server_error_lossy(reason: impl AsRef<str> + Into<String>) -> Self {
+    pub fn server_error_lossy(reason: impl Cowy<str>) -> Self {
         Self {
             status: Status::PERMANENT_FAILURE,
             meta: Meta::new_lossy(reason),
