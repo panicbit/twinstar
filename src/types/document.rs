@@ -436,7 +436,7 @@ impl HeadingText {
     pub fn new_lossy(line: impl Cowy<str>) -> Self {
         let line = strip_newlines(line);
 
-        Self(lossy_escaped_line(line, &[HEADING_START]))
+        Self(line)
     }
 }
 
