@@ -91,7 +91,7 @@ pub fn guess_mime_from_path<P: AsRef<Path>>(path: P) -> Mime {
     let extension = path.extension().and_then(|s| s.to_str());
     let mime = match extension {
         Some(extension) => match extension {
-            "gemini" => GEMINI_MIME_STR,
+            "gemini" | "gmi" => GEMINI_MIME_STR,
             "txt" => "text/plain",
             "jpeg" | "jpg" | "jpe" => "image/jpeg",
             "png" => "image/png",
