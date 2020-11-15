@@ -150,7 +150,27 @@ impl Document {
         self
     }
 
-    pub fn add_link_without_label(&mut self, uri: URIReference<'static>) -> &mut Self {
+    /// Adds a link to the document, but without a label.
+    ///
+    /// See `add_link` for details.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut document = northstar::Document::new();
+    ///
+    /// document.add_link_without_label("https://wikipedia.org");
+    ///
+    /// assert_eq!(document.to_string(), "=> https://wikipedia.org/\n");
+    /// ```
+    pub fn add_link_without_label<'a, U>(&mut self, uri: U) -> &mut Self
+    where
+        U: TryInto<URIReference<'a>>,
+    {
+        let uri = uri
+            .try_into()
+            .map(URIReference::into_owned)
+            .or_else(|_| ".".try_into()).expect("Northstar BUG");
         let link = Link {
             uri,
             label: None,
@@ -162,10 +182,40 @@ impl Document {
         self
     }
 
+    /// Adds a block of preformatted text.
+    ///
+    /// Lines that start with ` ``` ` will be prependend with a whitespace.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut document = northstar::Document::new();
+    ///
+    /// document.add_preformatted("a\n b\n  c");
+    ///
+    /// assert_eq!(document.to_string(), "```\na\n b\n  c\n```\n");
+    /// ```
     pub fn add_preformatted(&mut self, preformatted_text: &str) -> &mut Self {
         self.add_preformatted_with_alt("", preformatted_text)
     }
 
+    /// Adds a block of preformatted text with an alt text.
+    ///
+    /// Consecutive newlines in `alt` will be replaced
+    /// with a single whitespace.
+    ///
+    /// `preformatted_text` lines that start with ` ``` `
+    /// will be prependend with a whitespace.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut document = northstar::Document::new();
+    ///
+    /// document.add_preformatted_with_alt("rust", "fn main() {\n}\n");
+    ///
+    /// assert_eq!(document.to_string(), "```rust\nfn main() {\n}\n```\n");
+    /// ```
     pub fn add_preformatted_with_alt(&mut self, alt: &str, preformatted_text: &str) -> &mut Self {
         let alt = AltText::new_lossy(alt);
         let lines = preformatted_text
@@ -183,6 +233,22 @@ impl Document {
         self
     }
 
+    /// Adds a heading.
+    ///
+    /// Consecutive newlines in `text` will be replaced
+    /// with a single whitespace.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use northstar::document::HeadingLevel::H1;
+    ///
+    /// let mut document = northstar::Document::new();
+    ///
+    /// document.add_heading(H1, "Welcome!");
+    ///
+    /// assert_eq!(document.to_string(), "# Welcome!\n");
+    /// ```
     pub fn add_heading(&mut self, level: HeadingLevel, text: impl Cowy<str>) -> &mut Self {
         let text = HeadingText::new_lossy(text);
         let heading = Heading {
@@ -196,6 +262,21 @@ impl Document {
         self
     }
 
+    /// Adds an unordered list item.
+    ///
+    /// Consecutive newlines in `text` will be replaced
+    /// with a single whitespace.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut document = northstar::Document::new();
+    ///
+    /// document.add_unordered_list_item("milk");
+    /// document.add_unordered_list_item("eggs");
+    ///
+    /// assert_eq!(document.to_string(), "* milk\n* eggs\n");
+    /// ```
     pub fn add_unordered_list_item(&mut self, text: &str) -> &mut Self {
         let item = UnorderedListItem::new_lossy(text);
         let item = Item::UnorderedListItem(item);
@@ -205,6 +286,19 @@ impl Document {
         self
     }
 
+    /// Adds a quote.
+    ///
+    /// This function allows adding multiple quote lines at once.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut document = northstar::Document::new();
+    ///
+    /// document.add_quote("I think,\ntherefore I am");
+    ///
+    /// assert_eq!(document.to_string(), "> I think,\n> therefore I am\n");
+    /// ```
     pub fn add_quote(&mut self, text: &str) -> &mut Self {
         let quote = text
             .lines()
