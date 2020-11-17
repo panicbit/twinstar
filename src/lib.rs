@@ -12,7 +12,6 @@ use rustls::ClientCertVerifier;
 use tokio_rustls::{rustls, TlsAcceptor};
 use rustls::*;
 use anyhow::*;
-use uri::URIReference;
 use lazy_static::lazy_static;
 
 pub mod types;
