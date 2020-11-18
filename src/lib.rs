@@ -125,7 +125,7 @@ pub struct Builder<A> {
 
 impl<A: ToSocketAddrs> Builder<A> {
     fn bind(addr: A) -> Self {
-        Self { addr, timeout: Duration::from_secs(1) }
+        Self { addr, timeout: Duration::from_secs(30) }
     }
 
     /// Set the timeout on incoming requests
@@ -139,7 +139,7 @@ impl<A: ToSocketAddrs> Builder<A> {
     /// If you would like a timeout for your code itself, please use
     /// [`tokio::time::Timeout`] to implement it internally.
     ///
-    /// The default timeout is 1 second.
+    /// The default timeout is 30 seconds.
     pub fn set_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
         self
