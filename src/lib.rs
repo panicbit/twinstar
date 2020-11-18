@@ -39,6 +39,7 @@ pub struct Server {
     tls_acceptor: TlsAcceptor,
     listener: Arc<TcpListener>,
     handler: Handler,
+    timeout: Duration,
 }
 
 impl Server {
@@ -73,7 +74,7 @@ impl Server {
         };
 
         // Use a timeout for interacting with the client
-        let fut_accept_request = timeout(Duration::from_secs(5), fut_accept_request);
+        let fut_accept_request = timeout(self.timeout, fut_accept_request);
         let (mut request, mut stream) = fut_accept_request.await
             .context("Client timed out while waiting for response")??;
 
@@ -109,7 +110,7 @@ impl Server {
                 .await
                 .context("Failed to flush response data")
         };
-        timeout(Duration::from_millis(1000), fut_send_and_flush)
+        timeout(self.timeout, fut_send_and_flush)
             .await
             .context("Client timed out receiving response data")??;
 
@@ -119,11 +120,29 @@ impl Server {
 
 pub struct Builder<A> {
     addr: A,
+    timeout: Duration,
 }
 
 impl<A: ToSocketAddrs> Builder<A> {
     fn bind(addr: A) -> Self {
-        Self { addr }
+        Self { addr, timeout: Duration::from_secs(1) }
+    }
+
+    /// Set the timeout on incoming requests
+    ///
+    /// Note that this timeout is applied twice, once for the delivery of the request, and
+    /// once for sending the client's response.  This means that for a 1 second timeout,
+    /// the client will have 1 second to complete the TLS handshake and deliver a request
+    /// header, then your API will have as much time as it needs to handle the request,
+    /// before the client has another second to receive the response.
+    ///
+    /// If you would like a timeout for your code itself, please use
+    /// ['tokio::time::Timeout`] to implement it internally.
+    ///
+    /// The default timeout is 1 second.
+    pub fn set_timeout(mut self, timeout: Duration) -> Self {
+        self.timeout = timeout;
+        self
     }
 
     pub async fn serve<F>(self, handler: F) -> Result<()>
@@ -140,6 +159,7 @@ impl<A: ToSocketAddrs> Builder<A> {
             tls_acceptor: TlsAcceptor::from(config),
             listener: Arc::new(listener),
             handler: Arc::new(handler),
+            timeout: self.timeout,
         };
 
         server.serve().await
