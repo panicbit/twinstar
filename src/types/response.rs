@@ -47,7 +47,7 @@ impl Response {
     ///
     /// This is equivilent to:
     ///
-    /// ```norun
+    /// ```ignore
     /// Response::success(mime)
     ///     .with_body(body)
     /// ```
