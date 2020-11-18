@@ -1,11 +1,18 @@
 #[macro_use] extern crate log;
 
-use std::{panic::AssertUnwindSafe, convert::TryFrom, io::BufReader, sync::Arc};
+use std::{
+    panic::AssertUnwindSafe,
+    convert::TryFrom,
+    io::BufReader,
+    sync::Arc,
+    time::Duration,
+};
 use futures::{future::BoxFuture, FutureExt};
 use tokio::{
     prelude::*,
     io::{self, BufStream},
     net::{TcpStream, ToSocketAddrs},
+    time::timeout,
 };
 use tokio::net::TcpListener;
 use rustls::ClientCertVerifier;
@@ -54,12 +61,22 @@ impl Server {
     }
 
     async fn serve_client(self, stream: TcpStream) -> Result<()> {
-        let stream = self.tls_acceptor.accept(stream).await
-            .context("Failed to establish TLS session")?;
-        let mut stream = BufStream::new(stream);
+        let fut_accept_request = async {
+            let stream = self.tls_acceptor.accept(stream).await
+                .context("Failed to establish TLS session")?;
+            let mut stream = BufStream::new(stream);
 
-        let mut request = receive_request(&mut stream).await
-            .context("Failed to receive request")?;
+            let request = receive_request(&mut stream).await
+                .context("Failed to receive request")?;
+
+            Result::<_, anyhow::Error>::Ok((request, stream))
+        };
+
+        // Use a timeout for interacting with the client
+        let fut_accept_request = timeout(Duration::from_secs(5), fut_accept_request);
+        let (mut request, mut stream) = fut_accept_request.await
+            .context("Client timed out while waiting for response")??;
+
         debug!("Client requested: {}", request.uri());
 
         // Identify the client certificate from the tls stream.  This is the first
@@ -83,11 +100,18 @@ impl Server {
             })
             .context("Request handler failed")?;
 
-        send_response(response, &mut stream).await
-            .context("Failed to send response")?;
+        // Use a timeout for sending the response
+        let fut_send_and_flush = async {
+            send_response(response, &mut stream).await
+                .context("Failed to send response")?;
 
-        stream.flush().await
-            .context("Failed to flush response data")?;
+            stream.flush()
+                .await
+                .context("Failed to flush response data")
+        };
+        timeout(Duration::from_millis(1000), fut_send_and_flush)
+            .await
+            .context("Client timed out receiving response data")??;
 
         Ok(())
     }
