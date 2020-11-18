@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - `document` API for creating Gemini documents
+- add preliminary timeout API by [@Alch-Emi](https://github.com/Alch-Emi)
+- `Response::success_with_body` by [@Alch-Emi](https://github.com/Alch-Emi)
 
 ## [0.3.0] - 2020-11-14
 ### Added
