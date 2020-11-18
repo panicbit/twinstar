@@ -17,7 +17,7 @@ impl Response {
     }
 
     pub fn document(document: Document) -> Self {
-        Self::success(&GEMINI_MIME).with_body(document)
+        Self::success_with_body(&GEMINI_MIME, document)
     }
 
     pub fn input(prompt: impl Cowy<str>) -> Result<Self> {
@@ -33,6 +33,19 @@ impl Response {
     pub fn success(mime: &Mime) -> Self {
         let header = ResponseHeader::success(&mime);
         Self::new(header)
+    }
+
+    /// Create a successful response with a preconfigured body
+    ///
+    /// This is equivilent to:
+    ///
+    /// ```norun
+    /// Response::success(mime)
+    ///     .with_body(body)
+    /// ```
+    pub fn success_with_body(mime: &Mime, body: impl Into<Body>) -> Self {
+        Self::success(mime)
+            .with_body(body)
     }
 
     pub fn server_error(reason: impl Cowy<str>) -> Result<Self>  {
