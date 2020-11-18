@@ -20,7 +20,7 @@ pub async fn serve_file<P: AsRef<Path>>(path: P, mime: &Mime) -> Result<Response
         }
     };
 
-    Ok(Response::success(&mime).with_body(file))
+    Ok(Response::success_with_body(mime, file))
 }
 
 pub async fn serve_dir<D: AsRef<Path>, P: AsRef<Path>>(dir: D, virtual_path: &[P]) -> Result<Response> {

@@ -37,8 +37,10 @@ fn handle_request(users: Arc<RwLock<HashMap<CertBytes, String>>>, request: Reque
             if let Some(user) = users_read.get(cert_bytes) {
                 // The user has already registered
                 Ok(
-                    Response::success(&GEMINI_MIME)
-                        .with_body(format!("Welcome {}!", user))
+                    Response::success_with_body(
+                        &GEMINI_MIME,
+                        format!("Welcome {}!", user)
+                    )
                 )
             } else {
                 // The user still needs to register
@@ -49,11 +51,13 @@ fn handle_request(users: Arc<RwLock<HashMap<CertBytes, String>>>, request: Reque
                     let mut users_write = users.write().await;
                     users_write.insert(cert_bytes.clone(), username.to_owned());
                     Ok(
-                        Response::success(&GEMINI_MIME)
-                            .with_body(format!(
+                        Response::success_with_body(
+                            &GEMINI_MIME,
+                            format!(
                                 "Your account has been created {}!  Welcome!",
                                 username
-                            ))
+                            )
+                        )
                     )
                 } else {
                     // The user didn't provide input, and should be prompted
