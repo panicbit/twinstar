@@ -137,7 +137,7 @@ impl<A: ToSocketAddrs> Builder<A> {
     /// before the client has another second to receive the response.
     ///
     /// If you would like a timeout for your code itself, please use
-    /// ['tokio::time::Timeout`] to implement it internally.
+    /// [`tokio::time::Timeout`] to implement it internally.
     ///
     /// The default timeout is 1 second.
     pub fn set_timeout(mut self, timeout: Duration) -> Self {
