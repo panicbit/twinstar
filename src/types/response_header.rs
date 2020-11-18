@@ -1,4 +1,7 @@
+use std::convert::TryInto;
+
 use anyhow::*;
+use uriparse::URIReference;
 use crate::Mime;
 use crate::util::Cowy;
 use crate::types::{Status, Meta};
@@ -31,6 +34,18 @@ impl ResponseHeader {
         }
     }
 
+    pub fn redirect_temporary_lossy<'a>(location: impl TryInto<URIReference<'a>>) -> Self {
+        let location = match location.try_into() {
+            Ok(location) => location,
+            Err(_) => return Self::bad_request_lossy("Invalid redirect location"),
+        };
+
+        Self {
+            status: Status::REDIRECT_TEMPORARY,
+            meta: Meta::new_lossy(location.to_string()),
+        }
+    }
+
     pub fn server_error(reason: impl Cowy<str>) -> Result<Self> {
         Ok(Self {
             status: Status::PERMANENT_FAILURE,
@@ -49,6 +64,13 @@ impl ResponseHeader {
         Self {
             status: Status::NOT_FOUND,
             meta: Meta::new_lossy("Not found"),
+        }
+    }
+
+    pub fn bad_request_lossy(reason: impl Cowy<str>) -> Self {
+        Self {
+            status: Status::BAD_REQUEST,
+            meta: Meta::new_lossy(reason),
         }
     }
 

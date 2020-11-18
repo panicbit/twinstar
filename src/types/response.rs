@@ -1,4 +1,7 @@
+use std::convert::TryInto;
+
 use anyhow::*;
+use uriparse::URIReference;
 use crate::types::{ResponseHeader, Body, Mime, Document};
 use crate::util::Cowy;
 use crate::GEMINI_MIME;
@@ -35,6 +38,11 @@ impl Response {
         Self::new(header)
     }
 
+    pub fn redirect_temporary_lossy<'a>(location: impl TryInto<URIReference<'a>>) -> Self {
+        let header = ResponseHeader::redirect_temporary_lossy(location);
+        Self::new(header)
+    }
+
     /// Create a successful response with a preconfigured body
     ///
     /// This is equivilent to:
@@ -55,6 +63,11 @@ impl Response {
 
     pub fn not_found() -> Self {
         let header = ResponseHeader::not_found();
+        Self::new(header)
+    }
+
+    pub fn bad_request_lossy(reason: impl Cowy<str>) -> Self {
+        let header = ResponseHeader::bad_request_lossy(reason);
         Self::new(header)
     }
 
