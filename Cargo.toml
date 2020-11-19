@@ -10,13 +10,13 @@ documentation = "https://docs.rs/northstar"
 
 [features]
 default = ["serve_dir"]
-serve_dir = ["mime_guess"]
+serve_dir = ["mime_guess", "tokio/fs"]
 
 [dependencies]
 anyhow = "1.0.33"
 rustls = { version = "0.18.1", features = ["dangerous_configuration"] }
 tokio-rustls = "0.20.0"
-tokio = { version = "0.3.1", features = ["full"] }
+tokio = { version = "0.3.1", features = ["io-util","net","time", "rt"] }
 mime = "0.3.16"
 uriparse = "0.6.3"
 percent-encoding = "2.1.0"
