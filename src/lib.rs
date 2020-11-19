@@ -139,7 +139,12 @@ impl<A: ToSocketAddrs> Builder<A> {
     /// If you would like a timeout for your code itself, please use
     /// [`tokio::time::Timeout`] to implement it internally.
     ///
-    /// The default timeout is 30 seconds.
+    /// **The default timeout is 30 seconds.**  If you are considering changing this, keep
+    /// in mind that some clients, when recieving a file type not supported for display,
+    /// will prompt the user how they would like to proceed.  While this occurs, the
+    /// request hangs open.  Setting a short timeout may close the prompt before user has
+    /// a chance to respond.  If you are only serving `text/plain` and `text/gemini`, this
+    /// should not be a problem.
     pub fn set_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
         self
