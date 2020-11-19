@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - `document` API for creating Gemini documents
-- preliminary timeout API by [@Alch-Emi](https://github.com/Alch-Emi)
+- preliminary timeout API, incl a special case for complex MIMEs by [@Alch-Emi](https://github.com/Alch-Emi)
 - `Response::success_with_body` by [@Alch-Emi](https://github.com/Alch-Emi)
 - `redirect_temporary_lossy` for `Response` and `ResponseHeader`
 - `bad_request_lossy` for `Response` and `ResponseHeader`
