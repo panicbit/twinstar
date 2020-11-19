@@ -29,3 +29,5 @@ mime_guess = { version = "2.0.3", optional = true }
 
 [dev-dependencies]
 env_logger = "0.8.1"
+futures-util = "0.3.7"
+tokio = { version = "0.3.1", features = ["macros", "rt-multi-thread", "sync"] }
