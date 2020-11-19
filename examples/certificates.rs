@@ -1,5 +1,6 @@
 use anyhow::*;
-use futures::{future::BoxFuture, FutureExt};
+use futures_core::future::BoxFuture;
+use futures_util::FutureExt;
 use log::LevelFilter;
 use tokio::sync::RwLock;
 use northstar::{Certificate, GEMINI_MIME, GEMINI_PORT, Request, Response, Server};

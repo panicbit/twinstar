@@ -7,7 +7,8 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use futures::{future::BoxFuture, FutureExt};
+use futures_core::future::BoxFuture;
+use futures_util::future::FutureExt;
 use tokio::{
     prelude::*,
     io::{self, BufStream},
