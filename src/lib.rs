@@ -21,6 +21,7 @@ use tokio_rustls::{rustls, TlsAcceptor};
 use rustls::*;
 use anyhow::*;
 use lazy_static::lazy_static;
+use crate::util::opt_timeout;
 
 pub mod types;
 pub mod util;
@@ -41,6 +42,7 @@ pub struct Server {
     listener: Arc<TcpListener>,
     handler: Handler,
     timeout: Duration,
+    complex_timeout: Option<Duration>,
 }
 
 impl Server {
@@ -102,18 +104,54 @@ impl Server {
             })
             .context("Request handler failed")?;
 
-        // Use a timeout for sending the response
-        let fut_send_and_flush = async {
-            send_response(response, &mut stream).await
+            self.send_response(response, &mut stream).await
                 .context("Failed to send response")?;
 
-            stream.flush()
+        Ok(())
+    }
+
+    async fn send_response(&self, mut response: Response, stream: &mut (impl AsyncWrite + Unpin)) -> Result<()> {
+        let maybe_body = response.take_body();
+        let header = response.header();
+
+        let use_complex_timeout =
+            header.status.is_success() &&
+            maybe_body.is_some() &&
+            header.meta.as_str() != "text/plain" &&
+            header.meta.as_str() != "text/gemini" &&
+            self.complex_timeout.is_some();
+
+        let send_general_timeout;
+        let send_header_timeout;
+        let send_body_timeout;
+
+        if use_complex_timeout {
+            send_general_timeout = None;
+            send_header_timeout = Some(self.timeout);
+            send_body_timeout = self.complex_timeout;
+        } else {
+            send_general_timeout = Some(self.timeout);
+            send_header_timeout = None;
+            send_body_timeout = None;
+        }
+
+        opt_timeout(send_general_timeout, async {
+            // Send the header
+            opt_timeout(send_header_timeout, send_response_header(response.header(), stream))
                 .await
-                .context("Failed to flush response data")
-        };
-        timeout(self.timeout, fut_send_and_flush)
-            .await
-            .context("Client timed out receiving response data")??;
+                .context("Timed out while sending response header")?
+                .context("Failed to write response header")?;
+
+            // Send the body
+            opt_timeout(send_body_timeout, maybe_send_response_body(maybe_body, stream))
+                .await
+                .context("Timed out while sending response body")?
+                .context("Failed to write response body")?;
+
+            Ok::<_,Error>(())
+        })
+        .await
+        .context("Timed out while sending response data")??;
 
         Ok(())
     }
@@ -124,15 +162,17 @@ pub struct Builder<A> {
     cert_path: PathBuf,
     key_path: PathBuf,
     timeout: Duration,
+    complex_body_timeout_override: Option<Duration>,
 }
 
 impl<A: ToSocketAddrs> Builder<A> {
     fn bind(addr: A) -> Self {
         Self {
             addr,
+            timeout: Duration::from_secs(1),
+            complex_body_timeout_override: Some(Duration::from_secs(30)),
             cert_path: PathBuf::from("cert/cert.pem"),
             key_path: PathBuf::from("cert/key.pem"),
-            timeout: Duration::from_secs(30),
         }
     }
 
@@ -187,9 +227,51 @@ impl<A: ToSocketAddrs> Builder<A> {
     /// If you would like a timeout for your code itself, please use
     /// [`tokio::time::Timeout`] to implement it internally.
     ///
-    /// The default timeout is 30 seconds.
+    /// **The default timeout is 1 second.**  As somewhat of a workaround for
+    /// shortcomings of the specification, this timeout, and any timeout set using this
+    /// method, is overridden in special cases, specifically for MIME types outside of
+    /// `text/plain` and `text/gemini`, to be 30 seconds.  If you would like to change or
+    /// prevent this, please see
+    /// [`override_complex_body_timeout`](Self::override_complex_body_timeout()).
     pub fn set_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
+        self
+    }
+
+    /// Override the timeout for complex body types
+    ///
+    /// Many clients choose to handle body types which cannot be displayed by prompting
+    /// the user if they would like to download or open the request body.  However, since
+    /// this prompt occurs in the middle of receiving a request, often the connection
+    /// times out before the end user is able to respond to the prompt.
+    ///
+    /// As a workaround, it is possible to set an override on the request timeout in
+    /// specific conditions:
+    ///
+    /// 1. **Only override the timeout for receiving the body of the request.**  This will
+    ///    not override the timeout on sending the request header, nor on receiving the
+    ///    response header.
+    /// 2. **Only override the timeout for successful responses.**  The only bodies which
+    ///    have bodies are successful ones.  In all other cases, there's no body to
+    ///    timeout for
+    /// 3. **Only override the timeout for complex body types.**  Almost all clients are
+    ///    able to display `text/plain` and `text/gemini` responses, and will not prompt
+    ///    the user for these response types.  This means that there is no reason to
+    ///    expect a client to have a human-length response time for these MIME types.
+    ///    Because of this, responses of this type will not be overridden.
+    ///
+    /// This method is used to override the timeout for responses meeting these specific
+    /// criteria.  All other stages of the connection will use the timeout specified in
+    /// [`set_timeout()`](Self::set_timeout()).
+    ///
+    /// If this is set to [`None`], then the client will have the default amount of time
+    /// to both receive the header and the body.  If this is set to [`Some`], the client
+    /// will have the default amount of time to recieve the header, and an *additional*
+    /// alotment of time to recieve the body.
+    ///
+    /// The default timeout for this is 30 seconds.
+    pub fn override_complex_body_timeout(mut self, timeout: Option<Duration>) -> Self {
+        self.complex_body_timeout_override = timeout;
         self
     }
 
@@ -208,6 +290,7 @@ impl<A: ToSocketAddrs> Builder<A> {
             listener: Arc::new(listener),
             handler: Arc::new(handler),
             timeout: self.timeout,
+            complex_timeout: self.complex_body_timeout_override,
         };
 
         server.serve().await
@@ -242,18 +325,6 @@ async fn receive_request(stream: &mut (impl AsyncBufRead + Unpin)) -> Result<Req
     Ok(request)
 }
 
-async fn send_response(mut response: Response, stream: &mut (impl AsyncWrite + Unpin)) -> Result<()> {
-    send_response_header(response.header(), stream).await
-        .context("Failed to send response header")?;
-
-    if let Some(body) = response.take_body() {
-        send_response_body(body, stream).await
-            .context("Failed to send response body")?;
-    }
-
-    Ok(())
-}
-
 async fn send_response_header(header: &ResponseHeader, stream: &mut (impl AsyncWrite + Unpin)) -> Result<()> {
     let header = format!(
         "{status} {meta}\r\n",
@@ -262,6 +333,15 @@ async fn send_response_header(header: &ResponseHeader, stream: &mut (impl AsyncW
     );
 
     stream.write_all(header.as_bytes()).await?;
+    stream.flush().await?;
+
+    Ok(())
+}
+
+async fn maybe_send_response_body(maybe_body: Option<Body>, stream: &mut (impl AsyncWrite + Unpin)) -> Result<()> {
+    if let Some(body) = maybe_body {
+        send_response_body(body, stream).await?;
+    }
 
     Ok(())
 }
@@ -271,6 +351,8 @@ async fn send_response_body(body: Body, stream: &mut (impl AsyncWrite + Unpin)) 
         Body::Bytes(bytes) => stream.write_all(&bytes).await?,
         Body::Reader(mut reader) => { io::copy(&mut reader, stream).await?; },
     }
+
+    stream.flush().await?;
 
     Ok(())
 }
