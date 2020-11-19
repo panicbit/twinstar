@@ -122,7 +122,7 @@ impl Server {
         // All the other code is doing one of two things.  Either it's
         //
         // * code to add and handle timeouts (that's what all the async blocks and calls
-        //   to tokio::time::timeout are), or
+        //   to timeout are), or
         // * logic to decide whether to use the special case timeout handling (seperate
         //   timeouts for the header and the body) vs the normal timeout handling (header,
         //   body, and flush all as one timeout)
@@ -151,7 +151,7 @@ impl Server {
                             .await
                             .context("Failed to flush response header")
                     };
-                    tokio::time::timeout(self.timeout, fut_send_header)
+                    timeout(self.timeout, fut_send_header)
                         .await
                         .context("Timed out while sending response header")??;
 
@@ -164,7 +164,7 @@ impl Server {
                             .await
                             .context("Failed to flush response body")
                     };
-                    tokio::time::timeout(cplx_timeout, fut_send_body)
+                    timeout(cplx_timeout, fut_send_body)
                         .await
                         .context("Timed out while sending response body")??;
 
@@ -189,7 +189,7 @@ impl Server {
                 .await
                 .context("Failed to flush response data")
         };
-        tokio::time::timeout(self.timeout, fut_send_response)
+        timeout(self.timeout, fut_send_response)
             .await
             .context("Timed out while sending response data")??;
 
