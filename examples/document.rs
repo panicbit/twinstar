@@ -1,5 +1,6 @@
 use anyhow::*;
-use futures::{future::BoxFuture, FutureExt};
+use futures_core::future::BoxFuture;
+use futures_util::FutureExt;
 use log::LevelFilter;
 use northstar::{Server, Request, Response, GEMINI_PORT, Document};
 use northstar::document::HeadingLevel::*;

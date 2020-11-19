@@ -8,20 +8,25 @@ description = "Gemini server implementation"
 repository = "https://github.com/panicbit/northstar"
 documentation = "https://docs.rs/northstar"
 
+[features]
+default = ["serve_dir"]
+serve_dir = ["mime_guess", "tokio/fs"]
+
 [dependencies]
 anyhow = "1.0.33"
 rustls = { version = "0.18.1", features = ["dangerous_configuration"] }
 tokio-rustls = "0.20.0"
-tokio = { version = "0.3.1", features = ["full"] }
+tokio = { version = "0.3.1", features = ["io-util","net","time", "rt"] }
 mime = "0.3.16"
 uriparse = "0.6.3"
 percent-encoding = "2.1.0"
-futures = "0.3.7"
-itertools = "0.9.0"
+futures-core = "0.3.7"
 log = "0.4.11"
 webpki = "0.21.0"
 lazy_static = "1.4.0"
-mime_guess = "2.0.3"
+mime_guess = { version = "2.0.3", optional = true }
 
 [dev-dependencies]
 env_logger = "0.8.1"
+futures-util = "0.3.7"
+tokio = { version = "0.3.1", features = ["macros", "rt-multi-thread", "sync"] }

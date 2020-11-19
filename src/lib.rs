@@ -5,9 +5,10 @@ use std::{
     convert::TryFrom,
     io::BufReader,
     sync::Arc,
+    path::PathBuf,
     time::Duration,
 };
-use futures::{future::BoxFuture, FutureExt};
+use futures_core::future::BoxFuture;
 use tokio::{
     prelude::*,
     io::{self, BufStream},
@@ -32,7 +33,7 @@ pub const REQUEST_URI_MAX_LEN: usize = 1024;
 pub const GEMINI_PORT: u16 = 1965;
 
 type Handler = Arc<dyn Fn(Request) -> HandlerResponse + Send + Sync>;
-type HandlerResponse = BoxFuture<'static, Result<Response>>;
+pub (crate) type HandlerResponse = BoxFuture<'static, Result<Response>>;
 
 #[derive(Clone)]
 pub struct Server {
@@ -94,7 +95,7 @@ impl Server {
         let handler = (self.handler)(request);
         let handler = AssertUnwindSafe(handler);
 
-        let response = handler.catch_unwind().await
+        let response = util::HandlerCatchUnwind::new(handler).await
             .unwrap_or_else(|_| Response::server_error(""))
             .or_else(|err| {
                 error!("Handler failed: {:?}", err);
@@ -202,6 +203,8 @@ impl Server {
 
 pub struct Builder<A> {
     addr: A,
+    cert_path: PathBuf,
+    key_path: PathBuf,
     timeout: Duration,
     complex_body_timeout_override: Option<Duration>,
 }
@@ -212,7 +215,49 @@ impl<A: ToSocketAddrs> Builder<A> {
             addr,
             timeout: Duration::from_secs(1),
             complex_body_timeout_override: Some(Duration::from_secs(30)),
+            cert_path: PathBuf::from("cert/cert.pem"),
+            key_path: PathBuf::from("cert/key.pem"),
         }
+    }
+
+    /// Sets the directory that northstar should look for TLS certs and keys into
+    ///
+    /// Northstar will look for files called `cert.pem` and `key.pem` in the provided
+    /// directory.
+    ///
+    /// This does not need to be set if both [`set_cert()`](Self::set_cert()) and
+    /// [`set_key()`](Self::set_key()) have been called.
+    ///
+    /// If not set, the default is `cert/`
+    pub fn set_tls_dir(self, dir: impl Into<PathBuf>) -> Self {
+        let dir = dir.into();
+        self.set_cert(dir.join("cert.pem"))
+            .set_key(dir.join("key.pem"))
+    }
+
+    /// Set the path to the TLS certificate northstar will use
+    ///
+    /// This defaults to `cert/cert.pem`.
+    ///
+    /// This does not need to be called it [`set_tls_dir()`](Self::set_tls_dir()) has been
+    /// called.
+    pub fn set_cert(mut self, cert_path: impl Into<PathBuf>) -> Self {
+        self.cert_path = cert_path.into();
+        self
+    }
+
+    /// Set the path to the ertificate key northstar will use
+    ///
+    /// This defaults to `cert/key.pem`.
+    ///
+    /// This does not need to be called it [`set_tls_dir()`](Self::set_tls_dir()) has been
+    /// called.
+    ///
+    /// This should of course correspond to the key set in
+    /// [`set_cert()`](Self::set_cert())
+    pub fn set_key(mut self, key_path: impl Into<PathBuf>) -> Self {
+        self.key_path = key_path.into();
+        self
     }
 
     /// Set the timeout on incoming requests
@@ -278,7 +323,7 @@ impl<A: ToSocketAddrs> Builder<A> {
     where
         F: Fn(Request) -> HandlerResponse + Send + Sync + 'static,
     {
-        let config = tls_config()
+        let config = tls_config(&self.cert_path, &self.key_path)
             .context("Failed to create TLS config")?;
 
         let listener = TcpListener::bind(self.addr).await
@@ -345,12 +390,12 @@ async fn send_response_body(body: Body, stream: &mut (impl AsyncWrite + Unpin)) 
     Ok(())
 }
 
-fn tls_config() -> Result<Arc<ServerConfig>> {
+fn tls_config(cert_path: &PathBuf, key_path: &PathBuf) -> Result<Arc<ServerConfig>> {
     let mut config = ServerConfig::new(AllowAnonOrSelfsignedClient::new());
 
-    let cert_chain = load_cert_chain()
+    let cert_chain = load_cert_chain(cert_path)
         .context("Failed to load TLS certificate")?;
-    let key = load_key()
+    let key = load_key(key_path)
         .context("Failed to load TLS key")?;
     config.set_single_cert(cert_chain, key)
         .context("Failed to use loaded TLS certificate")?;
@@ -358,24 +403,22 @@ fn tls_config() -> Result<Arc<ServerConfig>> {
     Ok(config.into())
 }
 
-fn load_cert_chain() -> Result<Vec<Certificate>> {
-    let cert_path = "cert/cert.pem";
+fn load_cert_chain(cert_path: &PathBuf) -> Result<Vec<Certificate>> {
     let certs = std::fs::File::open(cert_path)
-        .with_context(|| format!("Failed to open `{}`", cert_path))?;
+        .with_context(|| format!("Failed to open `{:?}`", cert_path))?;
     let mut certs = BufReader::new(certs);
     let certs = rustls::internal::pemfile::certs(&mut certs)
-        .map_err(|_| anyhow!("failed to load certs `{}`", cert_path))?;
+        .map_err(|_| anyhow!("failed to load certs `{:?}`", cert_path))?;
 
     Ok(certs)
 }
 
-fn load_key() -> Result<PrivateKey> {
-    let key_path = "cert/key.pem";
+fn load_key(key_path: &PathBuf) -> Result<PrivateKey> {
     let keys = std::fs::File::open(key_path)
-        .with_context(|| format!("Failed to open `{}`", key_path))?;
+        .with_context(|| format!("Failed to open `{:?}`", key_path))?;
     let mut keys = BufReader::new(keys);
     let mut keys = rustls::internal::pemfile::pkcs8_private_keys(&mut keys)
-        .map_err(|_| anyhow!("failed to load key `{}`", key_path))?;
+        .map_err(|_| anyhow!("failed to load key `{:?}`", key_path))?;
 
     ensure!(!keys.is_empty(), "no key found");
 
