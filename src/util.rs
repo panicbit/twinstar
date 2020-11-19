@@ -2,7 +2,6 @@
 use std::path::{Path, PathBuf};
 #[cfg(feature="serve_dir")]
 use mime::Mime;
-#[cfg(feature="serve_dir")]
 use anyhow::*;
 #[cfg(feature="serve_dir")]
 use tokio::{
@@ -10,7 +9,8 @@ use tokio::{
     io,
 };
 #[cfg(feature="serve_dir")]
-use crate::types::{Response, Document, document::HeadingLevel::*};
+use crate::types::{Document, document::HeadingLevel::*};
+use crate::types::Response;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::task::Poll;
 use futures_core::future::Future;
