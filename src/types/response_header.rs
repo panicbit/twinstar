@@ -88,11 +88,11 @@ impl ResponseHeader {
         }
     }
 
-    pub fn status(&self) -> &Status {
+    pub const fn status(&self) -> &Status {
         &self.status
     }
 
-    pub fn meta(&self) -> &Meta {
+    pub const fn meta(&self) -> &Meta {
         &self.meta
     }
 }

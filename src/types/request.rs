@@ -39,7 +39,7 @@ impl Request {
         })
     }
 
-    pub fn uri(&self) -> &URIReference {
+    pub const fn uri(&self) -> &URIReference {
         &self.uri
     }
 
@@ -60,7 +60,7 @@ impl Request {
         self.certificate = cert;
     }
 
-    pub fn certificate(&self) -> Option<&Certificate> {
+    pub const fn certificate(&self) -> Option<&Certificate> {
         self.certificate.as_ref()
     }
 }

@@ -12,7 +12,7 @@ pub struct Response {
 }
 
 impl Response {
-    pub fn new(header: ResponseHeader) -> Self {
+    pub const fn new(header: ResponseHeader) -> Self {
         Self {
             header,
             body: None,
@@ -34,7 +34,7 @@ impl Response {
     }
 
     pub fn success(mime: &Mime) -> Self {
-        let header = ResponseHeader::success(&mime);
+        let header = ResponseHeader::success(mime);
         Self::new(header)
     }
 
@@ -86,7 +86,7 @@ impl Response {
         self
     }
 
-    pub fn header(&self) -> &ResponseHeader {
+    pub const fn header(&self) -> &ResponseHeader {
         &self.header
     }
 
