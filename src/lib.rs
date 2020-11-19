@@ -6,12 +6,14 @@ use std::{
     io::BufReader,
     sync::Arc,
     path::PathBuf,
+    time::Duration,
 };
 use futures::{future::BoxFuture, FutureExt};
 use tokio::{
     prelude::*,
     io::{self, BufStream},
     net::{TcpStream, ToSocketAddrs},
+    time::timeout,
 };
 use tokio::net::TcpListener;
 use rustls::ClientCertVerifier;
@@ -38,6 +40,7 @@ pub struct Server {
     tls_acceptor: TlsAcceptor,
     listener: Arc<TcpListener>,
     handler: Handler,
+    timeout: Duration,
 }
 
 impl Server {
@@ -60,12 +63,22 @@ impl Server {
     }
 
     async fn serve_client(self, stream: TcpStream) -> Result<()> {
-        let stream = self.tls_acceptor.accept(stream).await
-            .context("Failed to establish TLS session")?;
-        let mut stream = BufStream::new(stream);
+        let fut_accept_request = async {
+            let stream = self.tls_acceptor.accept(stream).await
+                .context("Failed to establish TLS session")?;
+            let mut stream = BufStream::new(stream);
 
-        let mut request = receive_request(&mut stream).await
-            .context("Failed to receive request")?;
+            let request = receive_request(&mut stream).await
+                .context("Failed to receive request")?;
+
+            Result::<_, anyhow::Error>::Ok((request, stream))
+        };
+
+        // Use a timeout for interacting with the client
+        let fut_accept_request = timeout(self.timeout, fut_accept_request);
+        let (mut request, mut stream) = fut_accept_request.await
+            .context("Client timed out while waiting for response")??;
+
         debug!("Client requested: {}", request.uri());
 
         // Identify the client certificate from the tls stream.  This is the first
@@ -89,11 +102,18 @@ impl Server {
             })
             .context("Request handler failed")?;
 
-        send_response(response, &mut stream).await
-            .context("Failed to send response")?;
+        // Use a timeout for sending the response
+        let fut_send_and_flush = async {
+            send_response(response, &mut stream).await
+                .context("Failed to send response")?;
 
-        stream.flush().await
-            .context("Failed to flush response data")?;
+            stream.flush()
+                .await
+                .context("Failed to flush response data")
+        };
+        timeout(self.timeout, fut_send_and_flush)
+            .await
+            .context("Client timed out receiving response data")??;
 
         Ok(())
     }
@@ -103,6 +123,7 @@ pub struct Builder<A> {
     addr: A,
     cert_path: PathBuf,
     key_path: PathBuf,
+    timeout: Duration,
 }
 
 impl<A: ToSocketAddrs> Builder<A> {
@@ -111,6 +132,7 @@ impl<A: ToSocketAddrs> Builder<A> {
             addr,
             cert_path: PathBuf::from("cert/cert.pem"),
             key_path: PathBuf::from("cert/key.pem"),
+            timeout: Duration::from_secs(30),
         }
     }
 
@@ -154,6 +176,23 @@ impl<A: ToSocketAddrs> Builder<A> {
         self
     }
 
+    /// Set the timeout on incoming requests
+    ///
+    /// Note that this timeout is applied twice, once for the delivery of the request, and
+    /// once for sending the client's response.  This means that for a 1 second timeout,
+    /// the client will have 1 second to complete the TLS handshake and deliver a request
+    /// header, then your API will have as much time as it needs to handle the request,
+    /// before the client has another second to receive the response.
+    ///
+    /// If you would like a timeout for your code itself, please use
+    /// [`tokio::time::Timeout`] to implement it internally.
+    ///
+    /// The default timeout is 30 seconds.
+    pub fn set_timeout(mut self, timeout: Duration) -> Self {
+        self.timeout = timeout;
+        self
+    }
+
     pub async fn serve<F>(self, handler: F) -> Result<()>
     where
         F: Fn(Request) -> HandlerResponse + Send + Sync + 'static,
@@ -168,6 +207,7 @@ impl<A: ToSocketAddrs> Builder<A> {
             tls_acceptor: TlsAcceptor::from(config),
             listener: Arc::new(listener),
             handler: Arc::new(handler),
+            timeout: self.timeout,
         };
 
         server.serve().await

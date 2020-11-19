@@ -5,7 +5,6 @@ use tokio::{
     fs::{self, File},
     io,
 };
-use crate::GEMINI_MIME_STR;
 use crate::types::{Response, Document, document::HeadingLevel::*};
 use itertools::Itertools;
 
@@ -20,7 +19,7 @@ pub async fn serve_file<P: AsRef<Path>>(path: P, mime: &Mime) -> Result<Response
         }
     };
 
-    Ok(Response::success(&mime).with_body(file))
+    Ok(Response::success_with_body(mime, file))
 }
 
 pub async fn serve_dir<D: AsRef<Path>, P: AsRef<Path>>(dir: D, virtual_path: &[P]) -> Result<Response> {
@@ -89,18 +88,16 @@ async fn serve_dir_listing<P: AsRef<Path>, B: AsRef<Path>>(path: P, virtual_path
 pub fn guess_mime_from_path<P: AsRef<Path>>(path: P) -> Mime {
     let path = path.as_ref();
     let extension = path.extension().and_then(|s| s.to_str());
-    let mime = match extension {
-        Some(extension) => match extension {
-            "gemini" | "gmi" => GEMINI_MIME_STR,
-            "txt" => "text/plain",
-            "jpeg" | "jpg" | "jpe" => "image/jpeg",
-            "png" => "image/png",
-            _ => "application/octet-stream",
-        },
-        None => "application/octet-stream",
+    let extension = match extension {
+        Some(extension) => extension,
+        None => return mime::APPLICATION_OCTET_STREAM,
     };
 
-    mime.parse::<Mime>().unwrap_or(mime::APPLICATION_OCTET_STREAM)
+    if let "gemini" | "gmi" = extension {
+        return crate::GEMINI_MIME.clone();
+    }
+
+    mime_guess::from_ext(extension).first_or_octet_stream()
 }
 
 /// A convenience trait alias for `AsRef<T> + Into<T::Owned>`,

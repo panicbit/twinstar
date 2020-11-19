@@ -1,4 +1,7 @@
+use std::convert::TryInto;
+
 use anyhow::*;
+use uriparse::URIReference;
 use crate::types::{ResponseHeader, Body, Mime, Document};
 use crate::util::Cowy;
 use crate::GEMINI_MIME;
@@ -17,7 +20,7 @@ impl Response {
     }
 
     pub fn document(document: Document) -> Self {
-        Self::success(&GEMINI_MIME).with_body(document)
+        Self::success_with_body(&GEMINI_MIME, document)
     }
 
     pub fn input(prompt: impl Cowy<str>) -> Result<Self> {
@@ -35,6 +38,24 @@ impl Response {
         Self::new(header)
     }
 
+    pub fn redirect_temporary_lossy<'a>(location: impl TryInto<URIReference<'a>>) -> Self {
+        let header = ResponseHeader::redirect_temporary_lossy(location);
+        Self::new(header)
+    }
+
+    /// Create a successful response with a preconfigured body
+    ///
+    /// This is equivilent to:
+    ///
+    /// ```ignore
+    /// Response::success(mime)
+    ///     .with_body(body)
+    /// ```
+    pub fn success_with_body(mime: &Mime, body: impl Into<Body>) -> Self {
+        Self::success(mime)
+            .with_body(body)
+    }
+
     pub fn server_error(reason: impl Cowy<str>) -> Result<Self>  {
         let header = ResponseHeader::server_error(reason)?;
         Ok(Self::new(header))
@@ -42,6 +63,11 @@ impl Response {
 
     pub fn not_found() -> Self {
         let header = ResponseHeader::not_found();
+        Self::new(header)
+    }
+
+    pub fn bad_request_lossy(reason: impl Cowy<str>) -> Self {
+        let header = ResponseHeader::bad_request_lossy(reason);
         Self::new(header)
     }
 
