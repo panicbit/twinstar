@@ -14,6 +14,7 @@ use crate::types::Response;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::task::Poll;
 use futures_core::future::Future;
+use tokio::time;
 
 #[cfg(feature="serve_dir")]
 pub async fn serve_file<P: AsRef<Path>>(path: P, mime: &Mime) -> Result<Response> {
@@ -153,5 +154,12 @@ impl Future for HandlerCatchUnwind {
             Ok(res) => res.map(Ok),
             Err(e) => Poll::Ready(Err(e))
         }
+    }
+}
+
+pub(crate) async fn opt_timeout<T>(duration: Option<time::Duration>, future: impl Future<Output = T>) -> Result<T, time::error::Elapsed> {
+    match duration {
+        Some(duration) => time::timeout(duration, future).await,
+        None => Ok(future.await),
     }
 }
