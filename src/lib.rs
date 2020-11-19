@@ -8,7 +8,6 @@ use std::{
     time::Duration,
 };
 use futures_core::future::BoxFuture;
-use futures_util::future::FutureExt;
 use tokio::{
     prelude::*,
     io::{self, BufStream},
@@ -33,7 +32,7 @@ pub const REQUEST_URI_MAX_LEN: usize = 1024;
 pub const GEMINI_PORT: u16 = 1965;
 
 type Handler = Arc<dyn Fn(Request) -> HandlerResponse + Send + Sync>;
-type HandlerResponse = BoxFuture<'static, Result<Response>>;
+pub (crate) type HandlerResponse = BoxFuture<'static, Result<Response>>;
 
 #[derive(Clone)]
 pub struct Server {
@@ -94,7 +93,7 @@ impl Server {
         let handler = (self.handler)(request);
         let handler = AssertUnwindSafe(handler);
 
-        let response = handler.catch_unwind().await
+        let response = util::HandlerCatchUnwind::new(handler).await
             .unwrap_or_else(|_| Response::server_error(""))
             .or_else(|err| {
                 error!("Handler failed: {:?}", err);

@@ -11,6 +11,9 @@ use tokio::{
 };
 #[cfg(feature="serve_dir")]
 use crate::types::{Response, Document, document::HeadingLevel::*};
+use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::task::Poll;
+use futures_core::future::Future;
 
 #[cfg(feature="serve_dir")]
 pub async fn serve_file<P: AsRef<Path>>(path: P, mime: &Mime) -> Result<Response> {
@@ -123,3 +126,32 @@ where
     C: AsRef<T> + Into<T::Owned>,
     T: ToOwned + ?Sized,
 {}
+
+/// A utility for catching unwinds on Futures.
+///
+/// This is adapted from the futures-rs CatchUnwind, in an effort to reduce the large
+/// amount of dependencies tied into the feature that provides this simple struct.
+#[must_use = "futures do nothing unless polled"]
+pub (crate) struct HandlerCatchUnwind {
+    future: AssertUnwindSafe<crate::HandlerResponse>,
+}
+
+impl HandlerCatchUnwind {
+    pub(super) fn new(future: AssertUnwindSafe<crate::HandlerResponse>) -> Self {
+        Self { future }
+    }
+}
+
+impl Future for HandlerCatchUnwind {
+    type Output = Result<Result<Response>, Box<dyn std::any::Any + Send>>;
+
+    fn poll(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context
+    ) -> Poll<Self::Output> {
+        match catch_unwind(AssertUnwindSafe(|| self.future.as_mut().poll(cx))) {
+            Ok(res) => res.map(Ok),
+            Err(e) => Poll::Ready(Err(e))
+        }
+    }
+}
