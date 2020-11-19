@@ -128,48 +128,49 @@ impl Server {
         //   body, and flush all as one timeout)
         //
         // The split between the two cases happens at this very first if block.
-        // Everything in this deep chain of if's and if-let's is for the special case.  If
-        // any one of the ifs fails, the code after the big if block is run, and that's
-        // the normal case.
+        // Everything in this if is for the special case.  If any one of the ifs fails,
+        // the code after the big if block is run, and that's the normal case.
         //
         // Hope this helps! Emi <3
 
-        if header.status == Status::SUCCESS && maybe_body.is_some() {
-            // aaaa let me have if-let chaining ;_;
-            if let "text/plain"|"text/gemini" = header.meta.as_str() {
-                if let Some(cplx_timeout) = self.complex_timeout {
+        if header.status == Status::SUCCESS &&
+            maybe_body.is_some() &&
+            header.meta.as_str() != "text/plain" &&
+            header.meta.as_str() != "text/gemini"
+        {
+            if let Some(cplx_timeout) = self.complex_timeout {
 
 
         ////////////// Use the special case timeout override /////////////////////////////
 
-                    // Send the header & flush
-                    let fut_send_header = async {
-                        send_response_header(response.header(), stream).await
-                            .context("Failed to write response header")?;
+                // Send the header & flush
+                let fut_send_header = async {
+                    send_response_header(response.header(), stream).await
+                        .context("Failed to write response header")?;
 
-                        stream.flush()
-                            .await
-                            .context("Failed to flush response header")
-                    };
-                    timeout(self.timeout, fut_send_header)
+                    stream.flush()
                         .await
-                        .context("Timed out while sending response header")??;
+                        .context("Failed to flush response header")
+                };
+                timeout(self.timeout, fut_send_header)
+                    .await
+                    .context("Timed out while sending response header")??;
 
-                    // Send the body & flush
-                    let fut_send_body = async {
-                        send_response_body(maybe_body.unwrap(), stream).await
-                            .context("Failed to write response body")?;
+                // Send the body & flush
+                let fut_send_body = async {
+                    send_response_body(maybe_body.unwrap(), stream).await
+                        .context("Failed to write response body")?;
 
-                        stream.flush()
-                            .await
-                            .context("Failed to flush response body")
-                    };
-                    timeout(cplx_timeout, fut_send_body)
+                    stream.flush()
                         .await
-                        .context("Timed out while sending response body")??;
+                        .context("Failed to flush response body")
+                };
+                timeout(cplx_timeout, fut_send_body)
+                    .await
+                    .context("Timed out while sending response body")??;
 
-                    return Ok(())
-                }
+
+                return Ok(())
             }
         }
 
