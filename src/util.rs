@@ -1,13 +1,18 @@
-use std::path::Path;
+#[cfg(feature="serve_dir")]
+use std::path::{Path, PathBuf};
+#[cfg(feature="serve_dir")]
 use mime::Mime;
+#[cfg(feature="serve_dir")]
 use anyhow::*;
+#[cfg(feature="serve_dir")]
 use tokio::{
     fs::{self, File},
     io,
 };
+#[cfg(feature="serve_dir")]
 use crate::types::{Response, Document, document::HeadingLevel::*};
-use itertools::Itertools;
 
+#[cfg(feature="serve_dir")]
 pub async fn serve_file<P: AsRef<Path>>(path: P, mime: &Mime) -> Result<Response> {
     let path = path.as_ref();
 
@@ -22,6 +27,7 @@ pub async fn serve_file<P: AsRef<Path>>(path: P, mime: &Mime) -> Result<Response
     Ok(Response::success_with_body(mime, file))
 }
 
+#[cfg(feature="serve_dir")]
 pub async fn serve_dir<D: AsRef<Path>, P: AsRef<Path>>(dir: D, virtual_path: &[P]) -> Result<Response> {
     debug!("Dir: {}", dir.as_ref().display());
     let dir = dir.as_ref().canonicalize()
@@ -47,6 +53,7 @@ pub async fn serve_dir<D: AsRef<Path>, P: AsRef<Path>>(dir: D, virtual_path: &[P
     serve_dir_listing(path, virtual_path).await
 }
 
+#[cfg(feature="serve_dir")]
 async fn serve_dir_listing<P: AsRef<Path>, B: AsRef<Path>>(path: P, virtual_path: &[B]) -> Result<Response> {
     let mut dir = match fs::read_dir(path).await {
         Ok(dir) => dir,
@@ -56,10 +63,10 @@ async fn serve_dir_listing<P: AsRef<Path>, B: AsRef<Path>>(path: P, virtual_path
         }
     };
 
-    let breadcrumbs = virtual_path.iter().map(|segment| segment.as_ref().display()).join("/");
+    let breadcrumbs: PathBuf = virtual_path.iter().collect();
     let mut document = Document::new();
 
-    document.add_heading(H1, format!("Index of /{}", breadcrumbs));
+    document.add_heading(H1, format!("Index of /{}", breadcrumbs.display()));
     document.add_blank_line();
 
     if virtual_path.get(0).map(<_>::as_ref) != Some(Path::new("")) {
@@ -85,6 +92,7 @@ async fn serve_dir_listing<P: AsRef<Path>, B: AsRef<Path>>(path: P, virtual_path
     Ok(Response::document(document))
 }
 
+#[cfg(feature="serve_dir")]
 pub fn guess_mime_from_path<P: AsRef<Path>>(path: P) -> Mime {
     let path = path.as_ref();
     let extension = path.extension().and_then(|s| s.to_str());

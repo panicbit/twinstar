@@ -39,7 +39,6 @@
 use std::convert::TryInto;
 use std::fmt;
 
-use itertools::Itertools;
 use crate::types::URIReference;
 use crate::util::Cowy;
 
@@ -550,5 +549,6 @@ fn strip_newlines(text: impl Cowy<str>) -> String {
     text.as_ref()
         .lines()
         .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>()
         .join(" ")
 }
