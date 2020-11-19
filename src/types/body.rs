@@ -11,7 +11,7 @@ pub enum Body {
 
 impl From<Document> for Body {
     fn from(document: Document) -> Self {
-        Body::from(document.to_string())
+        Self::from(document.to_string())
     }
 }
 

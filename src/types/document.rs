@@ -183,7 +183,7 @@ impl Document {
             .map(URIReference::into_owned)
             .or_else(|_| ".".try_into()).expect("Northstar BUG");
         let label = LinkLabel::from_lossy(label);
-        let link = Link { uri, label: Some(label) };
+        let link = Link { uri: Box::new(uri), label: Some(label) };
         let link = Item::Link(link);
 
         self.add_item(link);
@@ -213,7 +213,7 @@ impl Document {
             .map(URIReference::into_owned)
             .or_else(|_| ".".try_into()).expect("Northstar BUG");
         let link = Link {
-            uri,
+            uri: Box::new(uri),
             label: None,
         };
         let link = Item::Link(link);
@@ -391,6 +391,7 @@ impl fmt::Display for Document {
     }
 }
 
+#[allow(clippy::enum_variant_names)]
 enum Item {
     Text(Text),
     Link(Link),
@@ -414,7 +415,7 @@ impl Text {
 }
 
 struct Link {
-    uri: URIReference<'static>,
+    uri: Box<URIReference<'static>>,
     label: Option<LinkLabel>,
 }
 
@@ -424,7 +425,7 @@ impl LinkLabel {
     fn from_lossy(line: impl Cowy<str>) -> Self {
         let line = strip_newlines(line);
 
-        LinkLabel(line)
+        Self(line)
     }
 }
 

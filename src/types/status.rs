@@ -1,4 +1,3 @@
-
 #[derive(Debug,Copy,Clone,PartialEq,Eq)]
 pub struct Status(u8);
 
@@ -22,7 +21,7 @@ impl Status {
     pub const CERTIFICATE_NOT_AUTHORIZED: Self = Self(61);
     pub const CERTIFICATE_NOT_VALID: Self = Self(62);
 
-    pub fn code(&self) -> u8 {
+    pub const fn code(&self) -> u8 {
         self.0
     }
 
@@ -30,7 +29,7 @@ impl Status {
         self.category().is_success()
     }
 
-    pub fn category(&self) -> StatusCategory {
+    pub const fn category(&self) -> StatusCategory {
         let class = self.0 / 10;
 
         match class {

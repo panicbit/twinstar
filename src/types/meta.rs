@@ -12,7 +12,7 @@ impl Meta {
     /// Creates a new "Meta" string.
     /// Fails if `meta` contains `\n`.
     pub fn new(meta: impl Cowy<str>) -> Result<Self> {
-        ensure!(!meta.as_ref().contains("\n"), "Meta must not contain newlines");
+        ensure!(!meta.as_ref().contains('\n'), "Meta must not contain newlines");
         ensure!(meta.as_ref().len() <= Self::MAX_LEN, "Meta must not exceed {} bytes", Self::MAX_LEN);
 
         Ok(Self(meta.into()))
