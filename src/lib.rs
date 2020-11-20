@@ -35,8 +35,8 @@ pub use types::*;
 pub const REQUEST_URI_MAX_LEN: usize = 1024;
 pub const GEMINI_PORT: u16 = 1965;
 
-pub type Handler = Arc<dyn Fn(Request) -> HandlerResponse + Send + Sync>;
-pub type HandlerResponse = BoxFuture<'static, Result<Response>>;
+pub (crate) type Handler = Arc<dyn Fn(Request) -> HandlerResponse + Send + Sync>;
+pub (crate) type HandlerResponse = BoxFuture<'static, Result<Response>>;
 
 #[derive(Clone)]
 pub struct Server {
