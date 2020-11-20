@@ -25,7 +25,6 @@ use crate::util::opt_timeout;
 
 pub mod types;
 pub mod util;
-#[cfg(feature="routing")]
 pub mod routing;
 
 pub use mime;

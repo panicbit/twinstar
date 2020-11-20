@@ -1,3 +1,7 @@
+//! Utilities for routing requests
+//!
+//! See [`RoutingNode`] for details on how routes are matched.
+
 use uriparse::path::Path;
 
 use std::collections::HashMap;
@@ -18,6 +22,9 @@ use crate::types::Request;
 /// "/trans/rights/r/human", then the longer route always matches first, so a request for
 /// "/trans/rights/r/human/rights" would be routed to "/trans/rights/r/human", and
 /// "/trans/rights/now" would route to "/trans/rights"
+///
+/// Routing is only performed on normalized paths, so "/endpoint" and "/endpoint/" are
+/// considered to be the same route.
 pub struct RoutingNode(Option<Handler>, HashMap<String, Self>);
 
 impl RoutingNode {
@@ -27,12 +34,7 @@ impl RoutingNode {
     /// represented as a sequence of path segments.  For example, "/dir/image.png?text"
     /// should be represented as `&["dir", "image.png"]`.
     ///
-    /// Routing is performed only on normalized paths, so if a route exists for
-    /// "/endpoint", "/endpoint/" will also match, and vice versa.  Routes also match all
-    /// requests for which they are the base of, meaning a request of "/api/endpoint" will
-    /// match a route of "/api" if no route exists specifically for "/api/endpoint".
-    ///
-    /// Longer routes automatically match before shorter routes.
+    /// See [`RoutingNode`] for details on how routes are matched.
     pub fn match_path<I,S>(&self, path: I) -> Option<&Handler>
     where
         I: IntoIterator<Item=S>,
@@ -60,7 +62,7 @@ impl RoutingNode {
 
     /// Attempt to identify a route for a given [`Request`]
     ///
-    /// See [`match_path()`](Self::match_path()) for how matching works
+    /// See [`RoutingNode`] for details on how routes are matched.
     pub fn match_request(&self, req: Request) -> Option<&Handler> {
         let mut path = req.path().to_owned();
         path.normalize(false);

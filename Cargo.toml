@@ -10,7 +10,6 @@ documentation = "https://docs.rs/northstar"
 
 [features]
 default = ["serve_dir"]
-routing = []
 serve_dir = ["mime_guess", "tokio/fs"]
 
 [dependencies]
