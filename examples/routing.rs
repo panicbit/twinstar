@@ -48,6 +48,7 @@ fn generate_doc(route_name: &str) -> Document {
        .add_link_without_label("/")
        .add_link_without_label("/route")
        .add_link_without_label("/route/long")
-       .add_link_without_label("/route/not_real");
+       .add_link_without_label("/route/not_real")
+       .add_link_without_label("/rowte");
     doc
 }

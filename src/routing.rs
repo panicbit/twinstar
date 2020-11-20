@@ -93,7 +93,9 @@ impl RoutingNode {
 
         let mut node = self;
         for segment in path.segments() {
-            node = node.1.entry(segment.to_string()).or_default();
+            if segment != "" {
+                node = node.1.entry(segment.to_string()).or_default();
+            }
         }
 
         if node.0.is_some() {
