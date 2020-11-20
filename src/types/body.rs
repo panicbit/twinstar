@@ -2,6 +2,8 @@ use tokio::io::AsyncRead;
 #[cfg(feature="serve_dir")]
 use tokio::fs::File;
 
+use std::borrow::Borrow;
+
 use crate::types::Document;
 
 pub enum Body {
@@ -9,9 +11,9 @@ pub enum Body {
     Reader(Box<dyn AsyncRead + Send + Sync + Unpin>),
 }
 
-impl From<Document> for Body {
-    fn from(document: Document) -> Self {
-        Self::from(document.to_string())
+impl<D: Borrow<Document>> From<D> for Body {
+    fn from(document: D) -> Self {
+        Self::from(document.borrow().to_string())
     }
 }
 

@@ -1,4 +1,5 @@
 use std::convert::TryInto;
+use std::borrow::Borrow;
 
 use anyhow::*;
 use uriparse::URIReference;
@@ -19,7 +20,7 @@ impl Response {
         }
     }
 
-    pub fn document(document: Document) -> Self {
+    pub fn document(document: impl Borrow<Document>) -> Self {
         Self::success_with_body(&GEMINI_MIME, document)
     }
 
