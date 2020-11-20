@@ -22,6 +22,7 @@ use rustls::*;
 use anyhow::*;
 use lazy_static::lazy_static;
 use crate::util::opt_timeout;
+use routing::RoutingNode;
 
 pub mod types;
 pub mod util;
@@ -41,7 +42,7 @@ pub type HandlerResponse = BoxFuture<'static, Result<Response>>;
 pub struct Server {
     tls_acceptor: TlsAcceptor,
     listener: Arc<TcpListener>,
-    handler: Handler,
+    routes: Arc<RoutingNode>,
     timeout: Duration,
     complex_timeout: Option<Duration>,
 }
@@ -94,19 +95,24 @@ impl Server {
 
         request.set_cert(client_cert);
 
-        let handler = (self.handler)(request);
-        let handler = AssertUnwindSafe(handler);
+        let response = if let Some(handler) = self.routes.match_request(&request) {
 
-        let response = util::HandlerCatchUnwind::new(handler).await
-            .unwrap_or_else(|_| Response::server_error(""))
-            .or_else(|err| {
-                error!("Handler failed: {:?}", err);
-                Response::server_error("")
-            })
-            .context("Request handler failed")?;
+            let handler = (handler)(request);
+            let handler = AssertUnwindSafe(handler);
 
-            self.send_response(response, &mut stream).await
-                .context("Failed to send response")?;
+            util::HandlerCatchUnwind::new(handler).await
+                .unwrap_or_else(|_| Response::server_error(""))
+                .or_else(|err| {
+                    error!("Handler failed: {:?}", err);
+                    Response::server_error("")
+                })
+                .context("Request handler failed")?
+        } else {
+            Response::not_found()
+        };
+
+        self.send_response(response, &mut stream).await
+            .context("Failed to send response")?;
 
         Ok(())
     }
@@ -164,6 +170,7 @@ pub struct Builder<A> {
     key_path: PathBuf,
     timeout: Duration,
     complex_body_timeout_override: Option<Duration>,
+    routes: RoutingNode,
 }
 
 impl<A: ToSocketAddrs> Builder<A> {
@@ -174,6 +181,7 @@ impl<A: ToSocketAddrs> Builder<A> {
             complex_body_timeout_override: Some(Duration::from_secs(30)),
             cert_path: PathBuf::from("cert/cert.pem"),
             key_path: PathBuf::from("cert/key.pem"),
+            routes: RoutingNode::default(),
         }
     }
 
@@ -276,20 +284,30 @@ impl<A: ToSocketAddrs> Builder<A> {
         self
     }
 
-    pub async fn serve<F>(self, handler: F) -> Result<()>
-    where
-        F: Fn(Request) -> HandlerResponse + Send + Sync + 'static,
-    {
+    /// Add a handler for a route
+    ///
+    /// A route must be an absolute path, for example "/endpoint" or "/", but not
+    /// "endpoint".  Entering a relative or malformed path will result in a panic.
+    ///
+    /// For more information about routing mechanics, see the docs for [`RoutingNode`].
+    pub fn add_route(mut self, path: &'static str, handler: impl Into<Handler>) -> Self {
+        self.routes.add_route(path, handler);
+        self
+    }
+
+    pub async fn serve<F>(mut self) -> Result<()> {
         let config = tls_config(&self.cert_path, &self.key_path)
             .context("Failed to create TLS config")?;
 
         let listener = TcpListener::bind(self.addr).await
             .context("Failed to create socket")?;
 
+        self.routes.shrink();
+
         let server = Server {
             tls_acceptor: TlsAcceptor::from(config),
             listener: Arc::new(listener),
-            handler: Arc::new(handler),
+            routes: Arc::new(self.routes),
             timeout: self.timeout,
             complex_timeout: self.complex_body_timeout_override,
         };

@@ -63,7 +63,7 @@ impl RoutingNode {
     /// Attempt to identify a route for a given [`Request`]
     ///
     /// See [`RoutingNode`] for details on how routes are matched.
-    pub fn match_request(&self, req: Request) -> Option<&Handler> {
+    pub fn match_request(&self, req: &Request) -> Option<&Handler> {
         let mut path = req.path().to_owned();
         path.normalize(false);
         self.match_path(path.segments())
