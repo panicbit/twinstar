@@ -12,7 +12,8 @@ async fn main() -> Result<()> {
         .init();
 
     Server::bind(("localhost", GEMINI_PORT))
-        .serve(handle_request)
+        .add_route("/",handle_request)
+        .serve()
         .await
 }
 

@@ -290,12 +290,15 @@ impl<A: ToSocketAddrs> Builder<A> {
     /// "endpoint".  Entering a relative or malformed path will result in a panic.
     ///
     /// For more information about routing mechanics, see the docs for [`RoutingNode`].
-    pub fn add_route(mut self, path: &'static str, handler: impl Into<Handler>) -> Self {
-        self.routes.add_route(path, handler);
+    pub fn add_route<H>(mut self, path: &'static str, handler: H) -> Self
+    where
+        H: Fn(Request) -> HandlerResponse + Send + Sync + 'static,
+    {
+        self.routes.add_route(path, Arc::new(handler));
         self
     }
 
-    pub async fn serve<F>(mut self) -> Result<()> {
+    pub async fn serve(mut self) -> Result<()> {
         let config = tls_config(&self.cert_path, &self.key_path)
             .context("Failed to create TLS config")?;
 

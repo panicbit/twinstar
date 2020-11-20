@@ -76,7 +76,7 @@ impl RoutingNode {
     /// static strings.  If you would like to add a string dynamically, please use
     /// [`RoutingNode::add_route_by_path()`] in order to appropriately deal with any
     /// errors that might arise.
-    pub fn add_route(&mut self, path: &'static str, handler: impl Into<Handler>) {
+    pub fn add_route(&mut self, path: &'static str, handler: Handler) {
         let path: Path = path.try_into().expect("Malformed path route received");
         self.add_route_by_path(path, handler).unwrap();
     }
@@ -87,7 +87,7 @@ impl RoutingNode {
     /// this method.
     ///
     /// For information about how routes work, see [`RoutingNode::match_path()`]
-    pub fn add_route_by_path(&mut self, mut path: Path, handler: impl Into<Handler>) -> Result<(), ConflictingRouteError>{
+    pub fn add_route_by_path(&mut self, mut path: Path, handler: Handler) -> Result<(), ConflictingRouteError>{
         debug_assert!(path.is_absolute());
         path.normalize(false);
 
@@ -99,7 +99,7 @@ impl RoutingNode {
         if node.0.is_some() {
             Err(ConflictingRouteError())
         } else {
-            node.0 = Some(handler.into());
+            node.0 = Some(handler);
             Ok(())
         }
     }

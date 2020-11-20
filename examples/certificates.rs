@@ -19,7 +19,8 @@ async fn main() -> Result<()> {
     let users = Arc::<RwLock::<HashMap<CertBytes, String>>>::default();
 
     Server::bind(("0.0.0.0", GEMINI_PORT))
-        .serve(move|req| handle_request(users.clone(), req))
+        .add_route("/", move|req| handle_request(users.clone(), req))
+        .serve()
         .await
 }
 
