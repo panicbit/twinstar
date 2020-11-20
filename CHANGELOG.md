@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `server_dir` default feature for serve_dir utils [@Alch-Emi](https://github.com/Alch-Emi)
 ### Improved
 - build time and size by [@Alch-Emi](https://github.com/Alch-Emi)
+### Changed
+- Added route API [@Alch-Emi](https://github.com/Alch-Emi)
 
 ## [0.3.0] - 2020-11-14
 ### Added
