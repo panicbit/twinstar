@@ -7,15 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - `document` API for creating Gemini documents
-- preliminary timeout API, incl a special case for complex MIMEs by [@Alch-Emi](https://github.com/Alch-Emi)
-- `Response::success_with_body` by [@Alch-Emi](https://github.com/Alch-Emi)
+- preliminary timeout API, incl a special case for complex MIMEs by [@Alch-Emi]
+- `Response::success_with_body` by [@Alch-Emi]
 - `redirect_temporary_lossy` for `Response` and `ResponseHeader`
 - `bad_request_lossy` for `Response` and `ResponseHeader`
 - support for a lot more mime-types in `guess_mime_from_path`, backed by the `mime_guess` crate
-- customizable TLS cert & key paths by [@Alch-Emi](https://github.com/Alch-Emi)
-- `server_dir` default feature for serve_dir utils [@Alch-Emi](https://github.com/Alch-Emi)
+- customizable TLS cert & key paths by [@Alch-Emi]
+- `server_dir` default feature for serve_dir utils [@Alch-Emi]
+- Docments can be converted into responses with std::convert::Into [@Alch-Emi]
 ### Improved
-- build time and size by [@Alch-Emi](https://github.com/Alch-Emi)
+- build time and size by [@Alch-Emi]
 
 ## [0.3.0] - 2020-11-14
 ### Added
@@ -34,4 +35,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.0] - 2020-11-14
 ### Added
-- Access to client certificates by [@Alch-Emi](https://github.com/Alch-Emi)
+- Access to client certificates by [@Alch-Emi]
+
+[@Alch-Emi]: https://github.com/Alch-Emi
