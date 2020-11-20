@@ -2,7 +2,7 @@
 //!
 //! See [`RoutingNode`] for details on how routes are matched.
 
-use uriparse::path::Path;
+use uriparse::path::{Path, Segment};
 
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -34,39 +34,64 @@ impl RoutingNode {
     /// represented as a sequence of path segments.  For example, "/dir/image.png?text"
     /// should be represented as `&["dir", "image.png"]`.
     ///
+    /// If a match is found, it is returned, along with the segments of the path trailing
+    /// the handler.  For example, a route `/foo` recieving a request to `/foo/bar` would
+    /// receive `vec!["bar"]`
+    ///
     /// See [`RoutingNode`] for details on how routes are matched.
-    pub fn match_path<I,S>(&self, path: I) -> Option<&Handler>
+    pub fn match_path<I,S>(&self, path: I) -> Option<(Vec<S>, &Handler)>
     where
         I: IntoIterator<Item=S>,
         S: AsRef<str>,
     {
         let mut node = self;
-        let mut path = path.into_iter();
+        let mut path = path.into_iter().filter(|seg| !seg.as_ref().is_empty());
         let mut last_seen_handler = None;
+        let mut since_last_handler = Vec::new();
         loop {
             let Self(maybe_handler, map) = node;
 
-            last_seen_handler = maybe_handler.as_ref().or(last_seen_handler);
+            if maybe_handler.is_some() {
+                last_seen_handler = maybe_handler.as_ref();
+                since_last_handler.clear();
+            }
 
             if let Some(segment) = path.next() {
-                if let Some(route) = map.get(segment.as_ref()) {
+                let maybe_route = map.get(segment.as_ref());
+                since_last_handler.push(segment);
+
+                if let Some(route) = maybe_route {
                     node = route;
                 } else {
-                    return last_seen_handler;
+                    break;
                 }
             } else {
-                return last_seen_handler;
+                break;
             }
+        };
+
+        if let Some(handler) = last_seen_handler {
+            since_last_handler.extend(path);
+            Some((since_last_handler, handler))
+        } else {
+            None
         }
     }
 
     /// Attempt to identify a route for a given [`Request`]
     ///
-    /// See [`RoutingNode`] for details on how routes are matched.
-    pub fn match_request(&self, req: &Request) -> Option<&Handler> {
-        let mut path = req.path().to_owned();
+    /// See [`RoutingNode::match_path()`] for more information
+    pub fn match_request(&self, req: &Request) -> Option<(Vec<String>, &Handler)> {
+        let mut path = req.path().to_borrowed();
         path.normalize(false);
         self.match_path(path.segments())
+            .map(|(segs, h)| (
+                segs.into_iter()
+                    .map(Segment::as_str)
+                    .map(str::to_owned)
+                    .collect(),
+                h,
+            ))
     }
 
     /// Add a route to the network

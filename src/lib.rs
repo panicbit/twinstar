@@ -95,7 +95,9 @@ impl Server {
 
         request.set_cert(client_cert);
 
-        let response = if let Some(handler) = self.routes.match_request(&request) {
+        let response = if let Some((trailing, handler)) = self.routes.match_request(&request) {
+
+            request.set_trailing(trailing);
 
             let handler = (handler)(request);
             let handler = AssertUnwindSafe(handler);

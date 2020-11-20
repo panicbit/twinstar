@@ -8,6 +8,7 @@ pub struct Request {
     uri: URIReference<'static>,
     input: Option<String>,
     certificate: Option<Certificate>,
+    trailing_segments: Option<Vec<String>>,
 }
 
 impl Request {
@@ -36,6 +37,7 @@ impl Request {
             uri,
             input,
             certificate,
+            trailing_segments: None,
         })
     }
 
@@ -43,6 +45,31 @@ impl Request {
         &self.uri
     }
 
+    #[allow(clippy::missing_const_for_fn)]
+    /// All of the path segments following the route to which this request was bound.
+    ///
+    /// For example, if this handler was bound to the `/api` route, and a request was
+    /// received to `/api/v1/endpoint`, then this value would be `["v1", "endpoint"]`.
+    /// This should not be confused with [`path_segments()`](Self::path_segments()), which
+    /// contains *all* of the segments, not just those trailing the route.
+    ///
+    /// If the trailing segments have not been set, this method will panic, but this
+    /// should only be possible if you are constructing the Request yourself.  Requests
+    /// to handlers registered through [`add_route`](northstar::Builder::add_route()) will
+    /// always have trailing segments set.
+    pub fn trailing_segments(&self) -> &Vec<String> {
+        self.trailing_segments.as_ref().unwrap()
+    }
+
+    /// All of the segments in this path, percent decoded
+    ///
+    /// For example, for a request to `/api/v1/endpoint`, this would return `["api", "v1",
+    /// "endpoint"]`, no matter what route the handler that recieved this request was
+    /// bound to.  This is not to be confused with
+    /// [`trailing_segments()`](Self::trailing_segments), which contains only the segments
+    /// following the bound route.
+    ///
+    /// Additionally, unlike `trailing_segments()`, this method percent decodes the path.
     pub fn path_segments(&self) -> Vec<String> {
         self.uri()
             .path()
@@ -58,6 +85,10 @@ impl Request {
 
     pub fn set_cert(&mut self, cert: Option<Certificate>) {
         self.certificate = cert;
+    }
+
+    pub fn set_trailing(&mut self, segments: Vec<String>) {
+        self.trailing_segments = Some(segments);
     }
 
     pub const fn certificate(&self) -> Option<&Certificate> {
