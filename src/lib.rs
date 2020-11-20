@@ -35,14 +35,14 @@ pub use types::*;
 pub const REQUEST_URI_MAX_LEN: usize = 1024;
 pub const GEMINI_PORT: u16 = 1965;
 
-pub (crate) type Handler = Arc<dyn Fn(Request) -> HandlerResponse + Send + Sync>;
+type Handler = Arc<dyn Fn(Request) -> HandlerResponse + Send + Sync>;
 pub (crate) type HandlerResponse = BoxFuture<'static, Result<Response>>;
 
 #[derive(Clone)]
 pub struct Server {
     tls_acceptor: TlsAcceptor,
     listener: Arc<TcpListener>,
-    routes: Arc<RoutingNode>,
+    routes: Arc<RoutingNode<Handler>>,
     timeout: Duration,
     complex_timeout: Option<Duration>,
 }
@@ -172,7 +172,7 @@ pub struct Builder<A> {
     key_path: PathBuf,
     timeout: Duration,
     complex_body_timeout_override: Option<Duration>,
-    routes: RoutingNode,
+    routes: RoutingNode<Handler>,
 }
 
 impl<A: ToSocketAddrs> Builder<A> {

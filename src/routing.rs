@@ -7,16 +7,14 @@ use uriparse::path::{Path, Segment};
 use std::collections::HashMap;
 use std::convert::TryInto;
 
-use crate::Handler;
 use crate::types::Request;
 
-#[derive(Default)]
-/// A node for routing requests
+/// A node for linking values to routes
 ///
 /// Routing is processed by a tree, with each child being a single path segment.  For
-/// example, if a handler existed at "/trans/rights", then the root-level node would have
+/// example, if an entry existed at "/trans/rights", then the root-level node would have
 /// a child "trans", which would have a child "rights".  "rights" would have no children,
-/// but would have an attached handler.
+/// but would have an attached entry.
 ///
 /// If one route is shorter than another, say "/trans/rights" and
 /// "/trans/rights/r/human", then the longer route always matches first, so a request for
@@ -25,21 +23,21 @@ use crate::types::Request;
 ///
 /// Routing is only performed on normalized paths, so "/endpoint" and "/endpoint/" are
 /// considered to be the same route.
-pub struct RoutingNode(Option<Handler>, HashMap<String, Self>);
+pub struct RoutingNode<T>(Option<T>, HashMap<String, Self>);
 
-impl RoutingNode {
-    /// Attempt to identify a handler based on path segments
+impl<T> RoutingNode<T> {
+    /// Attempt to find and entry based on path segments
     ///
     /// This searches the network of routing nodes attempting to match a specific request,
     /// represented as a sequence of path segments.  For example, "/dir/image.png?text"
     /// should be represented as `&["dir", "image.png"]`.
     ///
     /// If a match is found, it is returned, along with the segments of the path trailing
-    /// the handler.  For example, a route `/foo` recieving a request to `/foo/bar` would
-    /// receive `vec!["bar"]`
+    /// the subpath matcing the route.  For example, a route `/foo` recieving a request to
+    /// `/foo/bar` would produce `vec!["bar"]`
     ///
     /// See [`RoutingNode`] for details on how routes are matched.
-    pub fn match_path<I,S>(&self, path: I) -> Option<(Vec<S>, &Handler)>
+    pub fn match_path<I,S>(&self, path: I) -> Option<(Vec<S>, &T)>
     where
         I: IntoIterator<Item=S>,
         S: AsRef<str>,
@@ -81,7 +79,7 @@ impl RoutingNode {
     /// Attempt to identify a route for a given [`Request`]
     ///
     /// See [`RoutingNode::match_path()`] for more information
-    pub fn match_request(&self, req: &Request) -> Option<(Vec<String>, &Handler)> {
+    pub fn match_request(&self, req: &Request) -> Option<(Vec<String>, &T)> {
         let mut path = req.path().to_borrowed();
         path.normalize(false);
         self.match_path(path.segments())
@@ -101,9 +99,9 @@ impl RoutingNode {
     /// static strings.  If you would like to add a string dynamically, please use
     /// [`RoutingNode::add_route_by_path()`] in order to appropriately deal with any
     /// errors that might arise.
-    pub fn add_route(&mut self, path: &'static str, handler: Handler) {
+    pub fn add_route(&mut self, path: &'static str, data: T) {
         let path: Path = path.try_into().expect("Malformed path route received");
-        self.add_route_by_path(path, handler).unwrap();
+        self.add_route_by_path(path, data).unwrap();
     }
 
     /// Add a route to the network
@@ -112,7 +110,7 @@ impl RoutingNode {
     /// this method.
     ///
     /// For information about how routes work, see [`RoutingNode::match_path()`]
-    pub fn add_route_by_path(&mut self, mut path: Path, handler: Handler) -> Result<(), ConflictingRouteError>{
+    pub fn add_route_by_path(&mut self, mut path: Path, data: T) -> Result<(), ConflictingRouteError>{
         debug_assert!(path.is_absolute());
         path.normalize(false);
 
@@ -126,7 +124,7 @@ impl RoutingNode {
         if node.0.is_some() {
             Err(ConflictingRouteError())
         } else {
-            node.0 = Some(handler);
+            node.0 = Some(data);
             Ok(())
         }
     }
@@ -138,6 +136,12 @@ impl RoutingNode {
             shrink.shrink_to_fit();
             to_shrink.extend(shrink.values_mut().map(|n| &mut n.1));
         }
+    }
+}
+
+impl<T> Default for RoutingNode<T> {
+    fn default() -> Self {
+        Self(None, HashMap::default())
     }
 }
 
