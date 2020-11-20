@@ -95,3 +95,9 @@ impl Response {
         self.body.take()
     }
 }
+
+impl<D: Borrow<Document>> From<D> for Response {
+    fn from(doc: D) -> Self {
+        Self::document(doc)
+    }
+}
