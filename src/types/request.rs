@@ -55,7 +55,7 @@ impl Request {
     ///
     /// If the trailing segments have not been set, this method will panic, but this
     /// should only be possible if you are constructing the Request yourself.  Requests
-    /// to handlers registered through [`add_route`](northstar::Builder::add_route()) will
+    /// to handlers registered through [`add_route`](crate::Builder::add_route()) will
     /// always have trailing segments set.
     pub fn trailing_segments(&self) -> &Vec<String> {
         self.trailing_segments.as_ref().unwrap()
@@ -64,7 +64,7 @@ impl Request {
     /// All of the segments in this path, percent decoded
     ///
     /// For example, for a request to `/api/v1/endpoint`, this would return `["api", "v1",
-    /// "endpoint"]`, no matter what route the handler that recieved this request was
+    /// "endpoint"]`, no matter what route the handler that received this request was
     /// bound to.  This is not to be confused with
     /// [`trailing_segments()`](Self::trailing_segments), which contains only the segments
     /// following the bound route.

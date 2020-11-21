@@ -33,7 +33,7 @@ impl<T> RoutingNode<T> {
     /// should be represented as `&["dir", "image.png"]`.
     ///
     /// If a match is found, it is returned, along with the segments of the path trailing
-    /// the subpath matcing the route.  For example, a route `/foo` recieving a request to
+    /// the subpath matching the route.  For example, a route `/foo` receiving a request to
     /// `/foo/bar` would produce `vec!["bar"]`
     ///
     /// See [`RoutingNode`] for details on how routes are matched.
