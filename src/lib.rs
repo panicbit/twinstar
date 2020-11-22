@@ -17,6 +17,7 @@ use tokio::{
 };
 use tokio::net::TcpListener;
 use rustls::ClientCertVerifier;
+use rustls::internal::msgs::handshake::DigitallySignedStruct;
 use tokio_rustls::{rustls, TlsAcceptor};
 use rustls::*;
 use anyhow::*;
@@ -458,12 +459,32 @@ impl ClientCertVerifier for AllowAnonOrSelfsignedClient {
         Some(false)
     }
 
+    // the below methods are a hack until webpki doesn't break with certain certs
+
     fn verify_client_cert(
         &self,
         _: &[Certificate],
         _: Option<&webpki::DNSName>
     ) -> Result<ClientCertVerified, TLSError> {
         Ok(ClientCertVerified::assertion())
+    }
+
+    fn verify_tls12_signature(
+        &self,
+        _message: &[u8],
+        _cert: &Certificate,
+        _dss: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, TLSError> {
+        Ok(HandshakeSignatureValid::assertion())
+    }
+
+    fn verify_tls13_signature(
+        &self,
+        _message: &[u8],
+        _cert: &Certificate,
+        _dss: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, TLSError> {
+        Ok(HandshakeSignatureValid::assertion())
     }
 }
 

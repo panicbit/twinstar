@@ -1,4 +1,5 @@
 use std::convert::TryInto;
+use std::borrow::Borrow;
 
 use anyhow::*;
 use uriparse::URIReference;
@@ -19,7 +20,7 @@ impl Response {
         }
     }
 
-    pub fn document(document: Document) -> Self {
+    pub fn document(document: impl Borrow<Document>) -> Self {
         Self::success_with_body(&GEMINI_MIME, document)
     }
 
@@ -92,5 +93,11 @@ impl Response {
 
     pub fn take_body(&mut self) -> Option<Body> {
         self.body.take()
+    }
+}
+
+impl<D: Borrow<Document>> From<D> for Response {
+    fn from(doc: D) -> Self {
+        Self::document(doc)
     }
 }

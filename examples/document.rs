@@ -19,9 +19,7 @@ async fn main() -> Result<()> {
 
 fn handle_request(_request: Request) -> BoxFuture<'static, Result<Response>> {
     async move {
-        let mut document = Document::new();
-
-        document
+        let response = Document::new()
             .add_preformatted(include_str!("northstar_logo.txt"))
             .add_blank_line()
             .add_link("https://docs.rs/northstar", "Documentation")
@@ -44,9 +42,9 @@ fn handle_request(_request: Request) -> BoxFuture<'static, Result<Response>> {
             .add_preformatted_with_alt("sh", concat!(
                 "mkdir cert && cd cert\n",
                 "openssl req -x509 -nodes -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365",
-            ));
-
-        Ok(Response::document(document))
+            ))
+            .into();
+        Ok(response)
     }
     .boxed()
 }
