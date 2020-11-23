@@ -23,8 +23,11 @@ pub async fn serve_file<P: AsRef<Path>>(path: P, mime: &Mime) -> Result<Response
     let file = match File::open(path).await {
         Ok(file) => file,
         Err(err) => match err.kind() {
-            io::ErrorKind::NotFound => return Ok(Response::not_found()),
-            _ => return Err(err.into()),
+            std::io::ErrorKind::PermissionDenied => {
+                warn!("Asked to serve {}, but permission denied by OS", path.display());
+                return Ok(Response::not_found());
+            },
+            _ => return warn_unexpected(err, path, line!()),
         }
     };
 
@@ -34,16 +37,44 @@ pub async fn serve_file<P: AsRef<Path>>(path: P, mime: &Mime) -> Result<Response
 #[cfg(feature="serve_dir")]
 pub async fn serve_dir<D: AsRef<Path>, P: AsRef<Path>>(dir: D, virtual_path: &[P]) -> Result<Response> {
     debug!("Dir: {}", dir.as_ref().display());
-    let dir = dir.as_ref().canonicalize()
-        .context("Failed to canonicalize directory")?;
+    let dir = dir.as_ref();
+    let dir = match dir.canonicalize() {
+        Ok(dir) => dir,
+        Err(e) => {
+            match e.kind() {
+                std::io::ErrorKind::NotFound => {
+                    warn!("Path {} not found.  Check your configuration.", dir.display());
+                    return Response::server_error("Server incorrectly configured")
+                },
+                std::io::ErrorKind::PermissionDenied => {
+                    warn!("Permission denied for {}.  Check that the server has access.", dir.display());
+                    return Response::server_error("Server incorrectly configured")
+                },
+                _ => return warn_unexpected(e, dir, line!()),
+            }
+        },
+    };
     let mut path = dir.to_path_buf();
 
     for segment in virtual_path {
         path.push(segment);
     }
 
-    let path = path.canonicalize()
-        .context("Failed to canonicalize path")?;
+    let path = match path.canonicalize() {
+        Ok(dir) => dir,
+        Err(e) => {
+            match e.kind() {
+                std::io::ErrorKind::NotFound => return Ok(Response::not_found()),
+                std::io::ErrorKind::PermissionDenied => {
+                    // Runs when asked to serve a file in a restricted dir
+                    // i.e. not /noaccess, but /noaccess/file
+                    warn!("Asked to serve {}, but permission denied by OS", path.display());
+                    return Ok(Response::not_found());
+                },
+                _ => return warn_unexpected(e, path.as_ref(), line!()),
+            }
+        },
+    };
 
     if !path.starts_with(&dir) {
         return Ok(Response::not_found());
@@ -59,11 +90,15 @@ pub async fn serve_dir<D: AsRef<Path>, P: AsRef<Path>>(dir: D, virtual_path: &[P
 
 #[cfg(feature="serve_dir")]
 async fn serve_dir_listing<P: AsRef<Path>, B: AsRef<Path>>(path: P, virtual_path: &[B]) -> Result<Response> {
-    let mut dir = match fs::read_dir(path).await {
+    let mut dir = match fs::read_dir(path.as_ref()).await {
         Ok(dir) => dir,
         Err(err) => match err.kind() {
             io::ErrorKind::NotFound => return Ok(Response::not_found()),
-            _ => return Err(err.into()),
+            std::io::ErrorKind::PermissionDenied => {
+                warn!("Asked to serve {}, but permission denied by OS", path.as_ref().display());
+                return Ok(Response::not_found());
+            },
+            _ => return warn_unexpected(err, path.as_ref(), line!()),
         }
     };
 
@@ -110,6 +145,22 @@ pub fn guess_mime_from_path<P: AsRef<Path>>(path: P) -> Mime {
     }
 
     mime_guess::from_ext(extension).first_or_octet_stream()
+}
+
+#[cfg(feature="serve_dir")]
+/// Print a warning to the log asking to file an issue and respond with "Unexpected Error"
+pub (crate) fn warn_unexpected(err: impl std::fmt::Debug, path: &Path, line: u32) -> Result<Response> {
+    warn!(
+        concat!(
+            "Unexpected error serving path {} at util.rs:{}, please report to ",
+            env!("CARGO_PKG_REPOSITORY"),
+            "/issues: {:?}",
+        ),
+        path.display(),
+        line,
+        err
+    );
+    Response::server_error("Unexpected error")
 }
 
 /// A convenience trait alias for `AsRef<T> + Into<T::Owned>`,
