@@ -137,6 +137,41 @@ impl<T> RoutingNode<T> {
             to_shrink.extend(shrink.values_mut().map(|n| &mut n.1));
         }
     }
+
+    /// Iterate over the items in this map
+    ///
+    /// This includes not just the direct children of this node, but also all children of
+    /// those children.  No guarantees are made as to the order values are visited in.
+    ///
+    /// ## Example
+    /// ```
+    /// # use std::collections::HashSet;
+    /// # use northstar::routing::RoutingNode;
+    /// let mut map = RoutingNode::<usize>::default();
+    /// map.add_route("/", 0);
+    /// map.add_route("/hello/world", 1312);
+    /// map.add_route("/example", 621);
+    ///
+    /// let values: HashSet<&usize> = map.iter().collect();
+    /// assert!(values.contains(&0));
+    /// assert!(values.contains(&1312));
+    /// assert!(values.contains(&621));
+    /// assert!(!values.contains(&1));
+    /// ```
+    pub fn iter(&self) -> Iter<'_, T> {
+        Iter {
+            unexplored: vec![self],
+        }
+    }
+}
+
+impl<'a, T> IntoIterator for &'a RoutingNode<T> {
+    type Item = &'a T;
+    type IntoIter = Iter<'a, T>;
+
+    fn into_iter(self) -> Iter<'a, T> {
+        self.iter()
+    }
 }
 
 impl<T> Default for RoutingNode<T> {
@@ -155,3 +190,25 @@ impl std::fmt::Display for ConflictingRouteError {
         write!(f, "Attempted to create a route with the same matcher as an existing route")
     }
 }
+
+#[derive(Clone)]
+/// An iterator over the values in a [`RoutingNode`] map
+pub struct Iter<'a, T> {
+    unexplored: Vec<&'a RoutingNode<T>>,
+}
+
+impl<'a, T> Iterator for Iter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(node) = self.unexplored.pop() {
+            self.unexplored.extend(node.1.values());
+            if node.0.is_some() {
+                return node.0.as_ref();
+            }
+        }
+        None
+    }
+}
+
+impl<T> std::iter::FusedIterator for Iter<'_, T> { }
