@@ -23,6 +23,31 @@ use crate::types::Request;
 ///
 /// Routing is only performed on normalized paths, so "/endpoint" and "/endpoint/" are
 /// considered to be the same route.
+///
+/// ```
+/// # use northstar::routing::RoutingNode;
+/// let mut routes = RoutingNode::<&'static str>::default();
+/// routes.add_route("/", "base");
+/// routes.add_route("/trans/rights/", "short route");
+/// routes.add_route("/trans/rights/r/human", "long route");
+///
+/// assert_eq!(
+///     routes.match_path(&["any", "other", "request"]),
+///     Some((vec![&"any", &"other", &"request"], &"base"))
+/// );
+/// assert_eq!(
+///     routes.match_path(&["trans", "rights"]),
+///     Some((vec![], &"short route"))
+/// );
+/// assert_eq!(
+///     routes.match_path(&["trans", "rights", "now"]),
+///     Some((vec![&"now"], &"short route"))
+/// );
+/// assert_eq!(
+///     routes.match_path(&["trans", "rights", "r", "human", "rights"]),
+///     Some((vec![&"rights"], &"long route"))
+/// );
+/// ```
 pub struct RoutingNode<T>(Option<T>, HashMap<String, Self>);
 
 impl<T> RoutingNode<T> {
