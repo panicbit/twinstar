@@ -147,8 +147,9 @@ impl Document {
     ///
     /// assert_eq!(document.to_string(), "hello\n * world!\n");
     /// ```
-    pub fn add_text(&mut self, text: &str) -> &mut Self {
+    pub fn add_text(&mut self, text: impl AsRef<str>) -> &mut Self {
         let text = text
+            .as_ref()
             .lines()
             .map(Text::new_lossy)
             .map(Item::Text);
@@ -236,8 +237,8 @@ impl Document {
     ///
     /// assert_eq!(document.to_string(), "```\na\n b\n  c\n```\n");
     /// ```
-    pub fn add_preformatted(&mut self, preformatted_text: &str) -> &mut Self {
-        self.add_preformatted_with_alt("", preformatted_text)
+    pub fn add_preformatted(&mut self, preformatted_text: impl AsRef<str>) -> &mut Self {
+        self.add_preformatted_with_alt("", preformatted_text.as_ref())
     }
 
     /// Adds a block of preformatted text with an alt text.
@@ -257,9 +258,10 @@ impl Document {
     ///
     /// assert_eq!(document.to_string(), "```rust\nfn main() {\n}\n```\n");
     /// ```
-    pub fn add_preformatted_with_alt(&mut self, alt: &str, preformatted_text: &str) -> &mut Self {
-        let alt = AltText::new_lossy(alt);
+    pub fn add_preformatted_with_alt(&mut self, alt: impl AsRef<str>, preformatted_text: impl AsRef<str>) -> &mut Self {
+        let alt = AltText::new_lossy(alt.as_ref());
         let lines = preformatted_text
+            .as_ref()
             .lines()
             .map(PreformattedText::new_lossy)
             .collect();
@@ -318,8 +320,8 @@ impl Document {
     ///
     /// assert_eq!(document.to_string(), "* milk\n* eggs\n");
     /// ```
-    pub fn add_unordered_list_item(&mut self, text: &str) -> &mut Self {
-        let item = UnorderedListItem::new_lossy(text);
+    pub fn add_unordered_list_item(&mut self, text: impl AsRef<str>) -> &mut Self {
+        let item = UnorderedListItem::new_lossy(text.as_ref());
         let item = Item::UnorderedListItem(item);
 
         self.add_item(item);
@@ -340,8 +342,9 @@ impl Document {
     ///
     /// assert_eq!(document.to_string(), "> I think,\n> therefore I am\n");
     /// ```
-    pub fn add_quote(&mut self, text: &str) -> &mut Self {
+    pub fn add_quote(&mut self, text: impl AsRef<str>) -> &mut Self {
         let quote = text
+            .as_ref()
             .lines()
             .map(Quote::new_lossy)
             .map(Item::Quote);
