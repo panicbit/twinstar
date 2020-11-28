@@ -29,7 +29,8 @@ impl Status {
         self.category().is_success()
     }
 
-    pub const fn category(&self) -> StatusCategory {
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn category(&self) -> StatusCategory {
         let class = self.0 / 10;
 
         match class {

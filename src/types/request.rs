@@ -60,7 +60,8 @@ impl Request {
         self.certificate = cert;
     }
 
-    pub const fn certificate(&self) -> Option<&Certificate> {
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn certificate(&self) -> Option<&Certificate> {
         self.certificate.as_ref()
     }
 }
