@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docments can be converted into responses with std::convert::Into [@Alch-Emi]
 ### Improved
 - build time and size by [@Alch-Emi]
+- Improved error handling in serve_dir [@Alch-Emi]
 
 ## [0.3.0] - 2020-11-14
 ### Added
