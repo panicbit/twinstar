@@ -3,7 +3,7 @@ use futures_core::future::BoxFuture;
 use futures_util::FutureExt;
 use log::LevelFilter;
 use tokio::sync::RwLock;
-use northstar::{Certificate, GEMINI_MIME, GEMINI_PORT, Request, Response, Server};
+use northstar::{Certificate, GEMINI_PORT, Request, Response, Server};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -38,8 +38,7 @@ fn handle_request(users: Arc<RwLock<HashMap<CertBytes, String>>>, request: Reque
             if let Some(user) = users_read.get(cert_bytes) {
                 // The user has already registered
                 Ok(
-                    Response::success_with_body(
-                        &GEMINI_MIME,
+                    Response::success_gemini(
                         format!("Welcome {}!", user)
                     )
                 )
@@ -52,8 +51,7 @@ fn handle_request(users: Arc<RwLock<HashMap<CertBytes, String>>>, request: Reque
                     let mut users_write = users.write().await;
                     users_write.insert(cert_bytes.clone(), username.to_owned());
                     Ok(
-                        Response::success_with_body(
-                            &GEMINI_MIME,
+                        Response::success_gemini(
                             format!(
                                 "Your account has been created {}!  Welcome!",
                                 username
