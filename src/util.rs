@@ -31,7 +31,7 @@ pub async fn serve_file<P: AsRef<Path>>(path: P, mime: &Mime) -> Result<Response
         }
     };
 
-    Ok(Response::success_with_body(mime, file))
+    Ok(Response::success(mime, file))
 }
 
 #[cfg(feature="serve_dir")]
@@ -128,7 +128,7 @@ async fn serve_dir_listing<P: AsRef<Path>, B: AsRef<Path>>(path: P, virtual_path
         ));
     }
 
-    Ok(Response::document(document))
+    Ok(document.into())
 }
 
 #[cfg(feature="serve_dir")]

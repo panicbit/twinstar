@@ -20,8 +20,12 @@ impl Response {
         }
     }
 
+    #[deprecated(
+        since = "0.4.0",
+        note = "Deprecated in favor of Response::success_gemini() or Document::into()"
+    )]
     pub fn document(document: impl Borrow<Document>) -> Self {
-        Self::success_with_body(&GEMINI_MIME, document)
+        Self::success_gemini(document)
     }
 
     pub fn input(prompt: impl Cowy<str>) -> Result<Self> {
@@ -34,27 +38,27 @@ impl Response {
         Self::new(header)
     }
 
-    pub fn success(mime: &Mime) -> Self {
-        let header = ResponseHeader::success(mime);
-        Self::new(header)
-    }
-
     pub fn redirect_temporary_lossy<'a>(location: impl TryInto<URIReference<'a>>) -> Self {
         let header = ResponseHeader::redirect_temporary_lossy(location);
         Self::new(header)
     }
 
-    /// Create a successful response with a preconfigured body
-    ///
-    /// This is equivilent to:
-    ///
-    /// ```ignore
-    /// Response::success(mime)
-    ///     .with_body(body)
-    /// ```
-    pub fn success_with_body(mime: &Mime, body: impl Into<Body>) -> Self {
-        Self::success(mime)
-            .with_body(body)
+    /// Create a successful response with a given body and MIME
+    pub fn success(mime: &Mime, body: impl Into<Body>) -> Self {
+        Self {
+            header: ResponseHeader::success(mime),
+            body: Some(body.into()),
+        }
+    }
+
+    /// Create a successful response with a `text/gemini` MIME
+    pub fn success_gemini(body: impl Into<Body>) -> Self {
+        Self::success(&GEMINI_MIME, body)
+    }
+
+    /// Create a successful response with a `text/plain` MIME
+    pub fn success_plain(body: impl Into<Body>) -> Self {
+        Self::success(&mime::TEXT_PLAIN, body)
     }
 
     pub fn server_error(reason: impl Cowy<str>) -> Result<Self>  {
@@ -98,6 +102,6 @@ impl Response {
 
 impl<D: Borrow<Document>> From<D> for Response {
     fn from(doc: D) -> Self {
-        Self::document(doc)
+        Self::success_gemini(doc)
     }
 }
