@@ -91,7 +91,8 @@ impl Request {
         self.trailing_segments = Some(segments);
     }
 
-    pub const fn certificate(&self) -> Option<&Certificate> {
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn certificate(&self) -> Option<&Certificate> {
         self.certificate.as_ref()
     }
 }
