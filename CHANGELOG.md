@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.4.0] - 2020-12-05
 ### Added
 - `document` API for creating Gemini documents
 - preliminary timeout API, incl a special case for complex MIMEs by [@Alch-Emi]
@@ -17,7 +19,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docments can be converted into responses with std::convert::Into [@Alch-Emi]
 ### Improved
 - build time and size by [@Alch-Emi](https://github.com/Alch-Emi)
-- build time and size by [@Alch-Emi]
 ### Changed
 - Added route API [@Alch-Emi](https://github.com/Alch-Emi)
 - Improved error handling in serve_dir [@Alch-Emi]
