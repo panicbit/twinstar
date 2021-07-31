@@ -16,7 +16,7 @@ Add the latest version of northstar to your `Cargo.toml`.
 ## Manually
 
 ```toml
-northstar = "0.3.0" # check crates.io for the latest version
+northstar = "0.4.0" # check crates.io for the latest version
 ```
 
 ## Automatically
