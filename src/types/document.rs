@@ -7,9 +7,9 @@
 //! # Examples
 //!
 //! ```
-//! use northstar::document::HeadingLevel::*;
+//! use twinstar::document::HeadingLevel::*;
 //!
-//! let mut document = northstar::Document::new();
+//! let mut document = twinstar::Document::new();
 //!
 //! document.add_heading(H1, "Heading 1");
 //! document.add_heading(H2, "Heading 2");
@@ -57,7 +57,7 @@ impl Document {
     /// # Examples
     ///
     /// ```
-    /// let document = northstar::Document::new();
+    /// let document = twinstar::Document::new();
     ///
     /// assert_eq!(document.to_string(), "");
     /// ```
@@ -73,7 +73,7 @@ impl Document {
     /// # Examples
     ///
     /// ```compile_fail
-    /// use northstar::document::{Document, Item, Text};
+    /// use twinstar::document::{Document, Item, Text};
     ///
     /// let mut document = Document::new();
     /// let text = Text::new_lossy("foo");
@@ -95,7 +95,7 @@ impl Document {
     /// # Examples
     ///
     /// ```compile_fail
-    /// use northstar::document::{Document, Item, Text};
+    /// use twinstar::document::{Document, Item, Text};
     ///
     /// let mut document = Document::new();
     /// let items = vec!["foo", "bar", "baz"]
@@ -120,7 +120,7 @@ impl Document {
     /// # Examples
     ///
     /// ```
-    /// let mut document = northstar::Document::new();
+    /// let mut document = twinstar::Document::new();
     ///
     /// document.add_blank_line();
     ///
@@ -141,7 +141,7 @@ impl Document {
     /// # Examples
     ///
     /// ```
-    /// let mut document = northstar::Document::new();
+    /// let mut document = twinstar::Document::new();
     ///
     /// document.add_text("hello\n* world!");
     ///
@@ -169,7 +169,7 @@ impl Document {
     /// # Examples
     ///
     /// ```
-    /// let mut document = northstar::Document::new();
+    /// let mut document = twinstar::Document::new();
     ///
     /// document.add_link("https://wikipedia.org", "Wiki\n\nWiki");
     ///
@@ -199,7 +199,7 @@ impl Document {
     /// # Examples
     ///
     /// ```
-    /// let mut document = northstar::Document::new();
+    /// let mut document = twinstar::Document::new();
     ///
     /// document.add_link_without_label("https://wikipedia.org");
     ///
@@ -231,7 +231,7 @@ impl Document {
     /// # Examples
     ///
     /// ```
-    /// let mut document = northstar::Document::new();
+    /// let mut document = twinstar::Document::new();
     ///
     /// document.add_preformatted("a\n b\n  c");
     ///
@@ -252,7 +252,7 @@ impl Document {
     /// # Examples
     ///
     /// ```
-    /// let mut document = northstar::Document::new();
+    /// let mut document = twinstar::Document::new();
     ///
     /// document.add_preformatted_with_alt("rust", "fn main() {\n}\n");
     ///
@@ -284,9 +284,9 @@ impl Document {
     /// # Examples
     ///
     /// ```
-    /// use northstar::document::HeadingLevel::H1;
+    /// use twinstar::document::HeadingLevel::H1;
     ///
-    /// let mut document = northstar::Document::new();
+    /// let mut document = twinstar::Document::new();
     ///
     /// document.add_heading(H1, "Welcome!");
     ///
@@ -313,7 +313,7 @@ impl Document {
     /// # Examples
     ///
     /// ```
-    /// let mut document = northstar::Document::new();
+    /// let mut document = twinstar::Document::new();
     ///
     /// document.add_unordered_list_item("milk");
     /// document.add_unordered_list_item("eggs");
@@ -336,7 +336,7 @@ impl Document {
     /// # Examples
     ///
     /// ```
-    /// let mut document = northstar::Document::new();
+    /// let mut document = twinstar::Document::new();
     ///
     /// document.add_quote("I think,\ntherefore I am");
     ///

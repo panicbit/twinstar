@@ -188,7 +188,7 @@ impl<A: ToSocketAddrs> Builder<A> {
         }
     }
 
-    /// Sets the directory that northstar should look for TLS certs and keys into
+    /// Sets the directory that twinstar should look for TLS certs and keys into
     ///
     /// Northstar will look for files called `cert.pem` and `key.pem` in the provided
     /// directory.
@@ -203,7 +203,7 @@ impl<A: ToSocketAddrs> Builder<A> {
             .set_key(dir.join("key.pem"))
     }
 
-    /// Set the path to the TLS certificate northstar will use
+    /// Set the path to the TLS certificate twinstar will use
     ///
     /// This defaults to `cert/cert.pem`.
     ///
@@ -214,7 +214,7 @@ impl<A: ToSocketAddrs> Builder<A> {
         self
     }
 
-    /// Set the path to the ertificate key northstar will use
+    /// Set the path to the ertificate key twinstar will use
     ///
     /// This defaults to `cert/key.pem`.
     ///
@@ -424,7 +424,7 @@ pub const GEMINI_MIME_STR: &str = "text/gemini";
 
 lazy_static! {
     /// Mime for Gemini documents ("text/gemini")
-    pub static ref GEMINI_MIME: Mime = GEMINI_MIME_STR.parse().expect("northstar BUG");
+    pub static ref GEMINI_MIME: Mime = GEMINI_MIME_STR.parse().expect("twinstar BUG");
 }
 
 #[deprecated(note = "Use `GEMINI_MIME` instead", since = "0.3.0")]

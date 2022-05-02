@@ -1,12 +1,12 @@
 [package]
-name = "northstar"
+name = "twinstar"
 version = "0.4.0"
 authors = ["panicbit <panicbit.dev@gmail.com>"]
 edition = "2018"
 license = "MIT OR Apache-2.0"
-description = "Gemini server implementation"
-repository = "https://github.com/panicbit/northstar"
-documentation = "https://docs.rs/northstar"
+description = 'Gemini server implementation (previously called "northstar")'
+repository = "https://github.com/panicbit/twinstar"
+documentation = "https://docs.rs/twinstar"
 
 [features]
 default = ["serve_dir"]

@@ -25,7 +25,7 @@ use crate::types::Request;
 /// considered to be the same route.
 ///
 /// ```
-/// # use northstar::routing::RoutingNode;
+/// # use twinstar::routing::RoutingNode;
 /// let mut routes = RoutingNode::<&'static str>::default();
 /// routes.add_route("/", "base");
 /// routes.add_route("/trans/rights/", "short route");
@@ -171,7 +171,7 @@ impl<T> RoutingNode<T> {
     /// ## Example
     /// ```
     /// # use std::collections::HashSet;
-    /// # use northstar::routing::RoutingNode;
+    /// # use twinstar::routing::RoutingNode;
     /// let mut map = RoutingNode::<usize>::default();
     /// map.add_route("/", 0);
     /// map.add_route("/hello/world", 1312);

@@ -1,28 +1,28 @@
 ```
-                     __  __         __
-   ____  ____  _____/ /_/ /_  _____/ /_____ ______
-  / __ \/ __ \/ ___/ __/ __ \/ ___/ __/ __ `/ ___/
- / / / / /_/ / /  / /_/ / / (__  ) /_/ /_/ / /
-/_/ /_/\____/_/   \__/_/ /_/____/\__/\__,_/_/
+   __           _            __
+  / /__      __(_)___  _____/ /_____ ______
+ / __/ | /| / / / __ \/ ___/ __/ __ `/ ___/
+/ /_ | |/ |/ / / / / (__  ) /_/ /_/ / /
+\__/ |__/|__/_/_/ /_/____/\__/\__,_/_/
 ```
 
-- [Documentation](https://docs.rs/northstar)
-- [GitHub](https://github.com/panicbit/northstar)
+- [Documentation](https://docs.rs/twinstar)
+- [GitHub](https://github.com/panicbit/twinstar)
 
 # Usage
 
-Add the latest version of northstar to your `Cargo.toml`.
+Add the latest version of twinstar to your `Cargo.toml`.
 
 ## Manually
 
 ```toml
-northstar = "0.4.0" # check crates.io for the latest version
+twinstar = "0.4.0" # check crates.io for the latest version
 ```
 
 ## Automatically
 
 ```sh
-cargo add northstar
+cargo add twinstar
 ```
 
 # Generating a key & certificate

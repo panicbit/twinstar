@@ -33,7 +33,7 @@ impl Meta {
 
         let meta: String = match truncate_pos {
             None => meta.into(),
-            Some(truncate_pos) => meta.get(..truncate_pos).expect("northstar BUG").into(),
+            Some(truncate_pos) => meta.get(..truncate_pos).expect("twinstar BUG").into(),
         };
 
         Self(meta)

@@ -2,15 +2,15 @@ use anyhow::*;
 use futures_core::future::BoxFuture;
 use futures_util::FutureExt;
 use log::LevelFilter;
-use northstar::{Document, document::HeadingLevel, Request, Response, GEMINI_PORT};
+use twinstar::{Document, document::HeadingLevel, Request, Response, GEMINI_PORT};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     env_logger::builder()
-        .filter_module("northstar", LevelFilter::Debug)
+        .filter_module("twinstar", LevelFilter::Debug)
         .init();
 
-    northstar::Server::bind(("localhost", GEMINI_PORT))
+    twinstar::Server::bind(("localhost", GEMINI_PORT))
         .add_route("/", handle_base)
         .add_route("/route", handle_short)
         .add_route("/route/long", handle_long)
