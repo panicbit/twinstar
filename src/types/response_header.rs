@@ -1,6 +1,6 @@
 use std::convert::TryInto;
 
-use anyhow::*;
+use anyhow::{Result, Context};
 use uriparse::URIReference;
 use crate::Mime;
 use crate::util::Cowy;

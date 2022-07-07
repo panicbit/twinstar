@@ -20,7 +20,7 @@ use rustls::ClientCertVerifier;
 use rustls::internal::msgs::handshake::DigitallySignedStruct;
 use tokio_rustls::{rustls, TlsAcceptor};
 use rustls::*;
-use anyhow::*;
+use anyhow::{Result, Context, anyhow, bail, ensure};
 use lazy_static::lazy_static;
 use crate::util::opt_timeout;
 use routing::RoutingNode;
@@ -158,7 +158,7 @@ impl Server {
                 .context("Timed out while sending response body")?
                 .context("Failed to write response body")?;
 
-            Ok::<_,Error>(())
+            Ok::<_,anyhow::Error>(())
         })
         .await
         .context("Timed out while sending response data")??;

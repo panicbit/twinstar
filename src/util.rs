@@ -2,7 +2,7 @@
 use std::path::{Path, PathBuf};
 #[cfg(feature="serve_dir")]
 use mime::Mime;
-use anyhow::*;
+use anyhow::{Result, Context};
 #[cfg(feature="serve_dir")]
 use tokio::{
     fs::{self, File},
