@@ -5,7 +5,7 @@ use log::LevelFilter;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use twinstar::{Request, Response, Server, GEMINI_PORT};
+use twinstar::{GEMINI_PORT, Request, Response, Server};
 
 // Workaround for Certificates not being hashable
 type CertBytes = Vec<u8>;

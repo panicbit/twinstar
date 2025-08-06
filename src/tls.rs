@@ -1,12 +1,12 @@
-use anyhow::{anyhow, ensure, Context, Result};
+use anyhow::{Context, Result, anyhow, ensure};
 use rustls::sign::CertifiedKey;
+use rustls::{DigitallySignedStruct, DistinguishedName, Error, ServerConfig, SignatureScheme};
 use rustls::{
     client::danger::HandshakeSignatureValid,
     pki_types::{CertificateDer, PrivateKeyDer, UnixTime},
-    server::danger::{ClientCertVerified, ClientCertVerifier},
     server::ResolvesServerCertUsingSni,
+    server::danger::{ClientCertVerified, ClientCertVerifier},
 };
-use rustls::{DigitallySignedStruct, DistinguishedName, Error, ServerConfig, SignatureScheme};
 use std::{collections::HashMap, io::BufReader, path::PathBuf, sync::Arc};
 
 pub fn tls_config(cert_path: &PathBuf, key_path: &PathBuf) -> Result<Arc<ServerConfig>> {
@@ -56,8 +56,8 @@ fn load_cert_chain(cert_path: &PathBuf) -> Result<Vec<CertificateDer<'static>>> 
 }
 
 fn load_key(key_path: &PathBuf) -> Result<PrivateKeyDer<'static>> {
-    let keys = std::fs::File::open(key_path)
-        .with_context(|| format!("Failed to open `{key_path:?}`"))?;
+    let keys =
+        std::fs::File::open(key_path).with_context(|| format!("Failed to open `{key_path:?}`"))?;
     let mut keys = BufReader::new(keys);
     let mut keys: Vec<_> = rustls_pemfile::pkcs8_private_keys(&mut keys)
         .collect::<Result<_, std::io::Error>>()

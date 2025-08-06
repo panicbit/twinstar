@@ -1,9 +1,9 @@
 use std::borrow::Borrow;
 use std::convert::TryInto;
 
+use crate::GEMINI_MIME;
 use crate::types::{Body, Document, Mime, ResponseHeader};
 use crate::util::Cowy;
-use crate::GEMINI_MIME;
 use anyhow::*;
 use uriparse::URIReference;
 

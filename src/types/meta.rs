@@ -1,5 +1,5 @@
-use crate::util::Cowy;
 use crate::Mime;
+use crate::util::Cowy;
 use anyhow::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]

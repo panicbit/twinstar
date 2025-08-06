@@ -3,7 +3,7 @@ use futures_core::future::BoxFuture;
 use futures_util::FutureExt;
 use log::LevelFilter;
 use twinstar::document::HeadingLevel::*;
-use twinstar::{Document, Request, Response, Server, GEMINI_PORT};
+use twinstar::{Document, GEMINI_PORT, Request, Response, Server};
 
 #[tokio::main]
 async fn main() -> Result<()> {

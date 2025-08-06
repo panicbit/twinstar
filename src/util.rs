@@ -1,11 +1,11 @@
 use crate::types::Response;
 #[cfg(feature = "serve_dir")]
-use crate::types::{document::HeadingLevel::*, Document};
+use crate::types::{Document, document::HeadingLevel::*};
 use anyhow::{Context, Result};
 use futures_core::future::Future;
 #[cfg(feature = "serve_dir")]
 use mime::Mime;
-use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 #[cfg(feature = "serve_dir")]
 use std::path::{Path, PathBuf};
 use std::task::Poll;

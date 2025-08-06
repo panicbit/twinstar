@@ -1,8 +1,8 @@
 use std::convert::TryInto;
 
+use crate::Mime;
 use crate::types::{Meta, Status};
 use crate::util::Cowy;
-use crate::Mime;
 use anyhow::{Context, Result};
 use uriparse::URIReference;
 
