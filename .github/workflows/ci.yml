@@ -2,6 +2,10 @@ name: Cargo Build & Test
 
 on:
   push:
+    paths:
+      - 'Cargo.*'
+      - 'src/**'
+      - 'examples/**'
   pull_request:
 
 env: 
