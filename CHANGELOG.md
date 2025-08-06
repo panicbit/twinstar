@@ -10,14 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Virtual host support [@gim913]
 - `Response::cgi_error_lossy` [@gim913]
 - `ResponseHeader::cgi_error_lossy` [@gim913]
-- `impl TryFrom<u8> for Status` [gim913]
-- `util::serve_file` (requires `serve_dir` feature) [gim913]
+- `impl TryFrom<u8> for Status` [@gim913]
+- `util::serve_file` (requires `serve_dir` feature) [@gim913]
 
 ### Changed
 - Rust edition 2018 -> 2024 [@panicbit]
 
 ### Improved
-- Formatting / refactoring [gim913]
+- Formatting / refactoring [@gim913]
 
 ## [0.4.0] - 2020-12-05
 
@@ -33,10 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docments can be converted into responses with std::convert::Into [@Alch-Emi]
 
 ### Improved
-- build time and size by [@Alch-Emi](https://github.com/Alch-Emi)
+- build time and size by [@Alch-Emi]
 
 ### Changed
-- Added route API [@Alch-Emi](https://github.com/Alch-Emi)
+- Added route API [@Alch-Emi]
 - Improved error handling in serve_dir [@Alch-Emi]
 
 ### Deprecated
@@ -64,3 +64,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Access to client certificates by [@Alch-Emi]
 
 [@Alch-Emi]: https://github.com/Alch-Emi
+[@gim913]: https://github.com/gim913
+[@panicbit]: https://github.com/panicbit
