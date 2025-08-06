@@ -6,7 +6,6 @@ on:
       - 'Cargo.*'
       - 'src/**'
       - 'examples/**'
-  pull_request:
 
 env: 
   CARGO_TERM_COLOR: always
