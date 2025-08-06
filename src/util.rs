@@ -162,10 +162,10 @@ pub async fn serve_dir_listing<P: AsRef<Path>, B: AsRef<Path>>(
         .fold(String::new(), |a, b| a + "/" + b);
     let mut document = Document::new();
 
-    document.add_heading(H1, format!("Index of {}", breadcrumbs));
+    document.add_heading(H1, format!("Index of {breadcrumbs}"));
     document.add_blank_line();
 
-    if virtual_path.get(0).map(<_>::as_ref) != Some(Path::new("")) {
+    if virtual_path.first().map(<_>::as_ref) != Some(Path::new("")) {
         document.add_link("..", "📁 ../");
     }
 
@@ -178,7 +178,7 @@ pub async fn serve_dir_listing<P: AsRef<Path>, B: AsRef<Path>>(
             .with_context(|| format!("Failed to get file type of `{}`", entry.path().display()))?
             .is_dir();
         let trailing_slash = if is_dir { "/" } else { "" };
-        let uri = format!("./{}{}", file_name, trailing_slash);
+        let uri = format!("./{file_name}{trailing_slash}");
 
         document.add_link(
             uri.as_str(),

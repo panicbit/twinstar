@@ -23,7 +23,7 @@ impl From<Vec<u8>> for Body {
     }
 }
 
-impl<'a> From<&'a [u8]> for Body {
+impl From<&[u8]> for Body {
     fn from(bytes: &[u8]) -> Self {
         Self::Bytes(bytes.to_owned())
     }
@@ -35,7 +35,7 @@ impl From<String> for Body {
     }
 }
 
-impl<'a> From<&'a str> for Body {
+impl From<&str> for Body {
     fn from(text: &str) -> Self {
         Self::Bytes(text.to_owned().into_bytes())
     }

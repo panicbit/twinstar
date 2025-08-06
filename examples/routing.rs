@@ -37,8 +37,8 @@ fn generate_doc(route_name: &str, req: &Request) -> Document {
     let trailing = req.trailing_segments().join("/");
     let mut doc = Document::new();
     doc.add_heading(HeadingLevel::H1, "Routing Demo")
-        .add_text(&format!("You're currently on the {} route", route_name))
-        .add_text(&format!("Trailing segments: /{}", trailing))
+        .add_text(format!("You're currently on the {route_name} route"))
+        .add_text(format!("Trailing segments: /{trailing}"))
         .add_blank_line()
         .add_text("Here's some links to try:")
         .add_link_without_label("/")

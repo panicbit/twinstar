@@ -146,7 +146,7 @@ impl<T> RoutingNode<T> {
 
         let mut node = self;
         for segment in path.segments() {
-            if segment != "" {
+            if !segment.is_empty() {
                 node = node.1.entry(segment.to_string()).or_default();
             }
         }

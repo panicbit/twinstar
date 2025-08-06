@@ -64,8 +64,9 @@ impl Meta {
 
 #[cfg(test)]
 mod tests {
+    use std::iter::repeat_n;
+
     use super::*;
-    use std::iter::repeat;
 
     #[test]
     fn new_rejects_newlines() {
@@ -77,7 +78,7 @@ mod tests {
 
     #[test]
     fn new_accepts_max_len() {
-        let meta: String = repeat('x').take(Meta::MAX_LEN).collect();
+        let meta: String = repeat_n('x', Meta::MAX_LEN).collect();
         let meta = Meta::new(meta);
 
         assert!(meta.is_ok());
@@ -85,7 +86,7 @@ mod tests {
 
     #[test]
     fn new_rejects_exceeding_max_len() {
-        let meta: String = repeat('x').take(Meta::MAX_LEN + 1).collect();
+        let meta: String = repeat_n('x', Meta::MAX_LEN + 1).collect();
         let meta = Meta::new(meta);
 
         assert!(meta.is_err());
@@ -125,7 +126,7 @@ mod tests {
 
     #[test]
     fn new_lossy_truncates_to_max_len() {
-        let meta: String = repeat('x').take(Meta::MAX_LEN + 1).collect();
+        let meta: String = repeat_n('x', Meta::MAX_LEN + 1).collect();
         let meta = Meta::new_lossy(meta);
 
         assert_eq!(meta.as_str().len(), Meta::MAX_LEN);
@@ -133,7 +134,7 @@ mod tests {
 
     #[test]
     fn new_lossy_truncates_multi_byte_sequences() {
-        let mut meta: String = repeat('x').take(Meta::MAX_LEN - 1).collect();
+        let mut meta: String = repeat_n('x', Meta::MAX_LEN - 1).collect();
         meta.push('🦀');
 
         assert_eq!(meta.len(), Meta::MAX_LEN + 3);

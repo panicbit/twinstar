@@ -46,7 +46,7 @@ pub fn tls_sni_config(
 
 fn load_cert_chain(cert_path: &PathBuf) -> Result<Vec<CertificateDer<'static>>> {
     let certs = std::fs::File::open(cert_path)
-        .with_context(|| format!("Failed to open `{:?}`", cert_path))?;
+        .with_context(|| format!("Failed to open `{cert_path:?}`"))?;
     let mut certs = BufReader::new(certs);
     let certs = rustls_pemfile::certs(&mut certs)
         .collect::<Result<_, std::io::Error>>()
@@ -57,7 +57,7 @@ fn load_cert_chain(cert_path: &PathBuf) -> Result<Vec<CertificateDer<'static>>> 
 
 fn load_key(key_path: &PathBuf) -> Result<PrivateKeyDer<'static>> {
     let keys = std::fs::File::open(key_path)
-        .with_context(|| format!("Failed to open `{:?}`", key_path))?;
+        .with_context(|| format!("Failed to open `{key_path:?}`"))?;
     let mut keys = BufReader::new(keys);
     let mut keys: Vec<_> = rustls_pemfile::pkcs8_private_keys(&mut keys)
         .collect::<Result<_, std::io::Error>>()

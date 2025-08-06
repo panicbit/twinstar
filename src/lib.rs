@@ -58,7 +58,7 @@ impl Server {
 
             tokio::spawn(async move {
                 if let Err(err) = this.serve_client(stream).await {
-                    error!("{:?}", err);
+                    error!("{err:?}");
                 }
             });
         }
@@ -131,7 +131,7 @@ impl Server {
                 .await
                 .unwrap_or_else(|_| Response::server_error(""))
                 .or_else(|err| {
-                    error!("Handler failed: {:?}", err);
+                    error!("Handler failed: {err:?}");
                     Response::server_error("")
                 })
                 .context("Request handler failed")?

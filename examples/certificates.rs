@@ -43,7 +43,7 @@ fn handle_request(
             let users_read = users.read().await;
             if let Some(user) = users_read.get(&cert_bytes) {
                 // The user has already registered
-                Ok(Response::success_gemini(format!("Welcome {}!", user)))
+                Ok(Response::success_gemini(format!("Welcome {user}!")))
             } else {
                 // The user still needs to register
                 drop(users_read);
@@ -53,8 +53,7 @@ fn handle_request(
                     let mut users_write = users.write().await;
                     users_write.insert(cert_bytes, username.to_owned());
                     Ok(Response::success_gemini(format!(
-                        "Your account has been created {}!  Welcome!",
-                        username
+                        "Your account has been created {username}!  Welcome!"
                     )))
                 } else {
                     // The user didn't provide input, and should be prompted
