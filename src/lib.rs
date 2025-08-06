@@ -1,8 +1,10 @@
 #[macro_use]
 extern crate log;
 
+// CI test
+
 use crate::util::opt_timeout;
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use futures_core::future::BoxFuture;
 use lazy_static::lazy_static;
 use routing::RoutingNode;

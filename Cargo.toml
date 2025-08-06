@@ -13,24 +13,24 @@ default = ["serve_dir"]
 serve_dir = ["mime_guess", "tokio/fs"]
 
 [dependencies]
-anyhow = "1.0.33"
-rustls = { version = "0.23.27" }
+anyhow = "1.0.98"
+rustls = { version = "0.23.31" }
 rustls-pemfile = { version = "2.2.0" }
 tokio-rustls = "0.26.2"
-tokio = { version = "1.47.0", features = ["io-util", "net", "time", "rt"] }
-mime = "0.3.16"
-uriparse = "0.6.3"
-percent-encoding = "2.1.0"
-futures-core = "0.3.7"
-log = "0.4.11"
+tokio = { version = "1.47.1", features = ["io-util", "net", "time", "rt"] }
+mime = "0.3.17"
+uriparse = "0.6.4"
+percent-encoding = "2.3.1"
+futures-core = "0.3.31"
+log = "0.4.27"
 webpki = "0.22.4"
-lazy_static = "1.4.0"
-mime_guess = { version = "2.0.3", optional = true }
+lazy_static = "1.5.0"
+mime_guess = { version = "2.0.5", optional = true }
 
 [dev-dependencies]
 env_logger = "0.11.8"
-futures-util = "0.3.7"
-tokio = { version = "1.47.0", features = ["macros", "rt-multi-thread", "sync"] }
+futures-util = "0.3.31"
+tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread", "sync"] }
 
 [[example]]
 name = "serve_dir"
