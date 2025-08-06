@@ -6,6 +6,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Virtual host support [@gim913]
+- `Response::cgi_error_lossy` [@gim913]
+- `ResponseHeader::cgi_error_lossy` [@gim913]
+- `impl TryFrom<u8> for Status` [gim913]
+- `util::serve_file` (requires `serve_dir` feature) [gim913]
+
+### Changed
+- Rust edition 2018 -> 2024 [@panicbit]
+
+### Improved
+- Formatting / refactoring [gim913]
+
 ## [0.4.0] - 2020-12-05
 
 ### Added
