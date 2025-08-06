@@ -2,7 +2,7 @@
 name = "twinstar"
 version = "0.4.0"
 authors = ["panicbit <panicbit.dev@gmail.com>"]
-edition = "2018"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 description = 'Gemini server implementation (previously called "northstar")'
 repository = "https://github.com/panicbit/twinstar"
@@ -17,7 +17,7 @@ anyhow = "1.0.33"
 rustls = { version = "0.23.27" }
 rustls-pemfile = { version = "2.2.0" }
 tokio-rustls = "0.26.2"
-tokio = { version = "1.47.0", features = ["io-util","net","time", "rt"] }
+tokio = { version = "1.47.0", features = ["io-util", "net", "time", "rt"] }
 mime = "0.3.16"
 uriparse = "0.6.3"
 percent-encoding = "2.1.0"
