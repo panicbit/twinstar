@@ -16,7 +16,7 @@ Add the latest version of twinstar to your `Cargo.toml`.
 ## Manually
 
 ```toml
-twinstar = "0.4.0" # check crates.io for the latest version
+twinstar = "0.5.0" # check crates.io for the latest version
 ```
 
 ## Automatically

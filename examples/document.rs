@@ -33,7 +33,7 @@ fn handle_request(_request: Request) -> BoxFuture<'static, Result<Response>> {
             .add_blank_line()
             .add_preformatted_with_alt(
                 "toml",
-                r#"twinstar = "0.4.0" # check crates.io for the latest version"#,
+                r#"twinstar = "0.5.0" # check crates.io for the latest version"#,
             )
             .add_blank_line()
             .add_heading(H2, "Automatically")
