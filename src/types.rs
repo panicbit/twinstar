@@ -1,5 +1,5 @@
 pub use ::mime::Mime;
-pub use rustls::Certificate;
+pub use rustls::pki_types::CertificateDer;
 pub use uriparse::URIReference;
 
 mod meta;

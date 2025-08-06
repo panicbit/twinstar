@@ -1,12 +1,12 @@
 use std::convert::TryInto;
 
-use anyhow::{Result, Context};
-use uriparse::URIReference;
-use crate::Mime;
+use crate::types::{Meta, Status};
 use crate::util::Cowy;
-use crate::types::{Status, Meta};
+use crate::Mime;
+use anyhow::{Context, Result};
+use uriparse::URIReference;
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct ResponseHeader {
     pub status: Status,
     pub meta: Meta,
@@ -43,6 +43,13 @@ impl ResponseHeader {
         Self {
             status: Status::REDIRECT_TEMPORARY,
             meta: Meta::new_lossy(location.to_string()),
+        }
+    }
+
+    pub fn cgi_error_lossy(reason: impl Cowy<str>) -> Self {
+        Self {
+            status: Status::CGI_ERROR,
+            meta: Meta::new_lossy(reason),
         }
     }
 

@@ -148,11 +148,7 @@ impl Document {
     /// assert_eq!(document.to_string(), "hello\n * world!\n");
     /// ```
     pub fn add_text(&mut self, text: impl AsRef<str>) -> &mut Self {
-        let text = text
-            .as_ref()
-            .lines()
-            .map(Text::new_lossy)
-            .map(Item::Text);
+        let text = text.as_ref().lines().map(Text::new_lossy).map(Item::Text);
 
         self.add_items(text);
 
@@ -182,9 +178,13 @@ impl Document {
         let uri = uri
             .try_into()
             .map(URIReference::into_owned)
-            .or_else(|_| ".".try_into()).expect("Northstar BUG");
+            .or_else(|_| ".".try_into())
+            .expect("Northstar BUG");
         let label = LinkLabel::from_lossy(label);
-        let link = Link { uri: Box::new(uri), label: Some(label) };
+        let link = Link {
+            uri: Box::new(uri),
+            label: Some(label),
+        };
         let link = Item::Link(link);
 
         self.add_item(link);
@@ -212,7 +212,8 @@ impl Document {
         let uri = uri
             .try_into()
             .map(URIReference::into_owned)
-            .or_else(|_| ".".try_into()).expect("Northstar BUG");
+            .or_else(|_| ".".try_into())
+            .expect("Northstar BUG");
         let link = Link {
             uri: Box::new(uri),
             label: None,
@@ -258,17 +259,18 @@ impl Document {
     ///
     /// assert_eq!(document.to_string(), "```rust\nfn main() {\n}\n```\n");
     /// ```
-    pub fn add_preformatted_with_alt(&mut self, alt: impl AsRef<str>, preformatted_text: impl AsRef<str>) -> &mut Self {
+    pub fn add_preformatted_with_alt(
+        &mut self,
+        alt: impl AsRef<str>,
+        preformatted_text: impl AsRef<str>,
+    ) -> &mut Self {
         let alt = AltText::new_lossy(alt.as_ref());
         let lines = preformatted_text
             .as_ref()
             .lines()
             .map(PreformattedText::new_lossy)
             .collect();
-        let preformatted = Preformatted {
-            alt,
-            lines,
-        };
+        let preformatted = Preformatted { alt, lines };
         let preformatted = Item::Preformatted(preformatted);
 
         self.add_item(preformatted);
@@ -294,10 +296,7 @@ impl Document {
     /// ```
     pub fn add_heading(&mut self, level: HeadingLevel, text: impl Cowy<str>) -> &mut Self {
         let text = HeadingText::new_lossy(text);
-        let heading = Heading {
-            level,
-            text,
-        };
+        let heading = Heading { level, text };
         let heading = Item::Heading(heading);
 
         self.add_item(heading);
@@ -343,11 +342,7 @@ impl Document {
     /// assert_eq!(document.to_string(), "> I think,\n> therefore I am\n");
     /// ```
     pub fn add_quote(&mut self, text: impl AsRef<str>) -> &mut Self {
-        let quote = text
-            .as_ref()
-            .lines()
-            .map(Quote::new_lossy)
-            .map(Item::Quote);
+        let quote = text.as_ref().lines().map(Quote::new_lossy).map(Item::Quote);
 
         self.add_items(quote);
 
@@ -356,13 +351,16 @@ impl Document {
 }
 
 impl fmt::Display for Document {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for item in &self.items {
             match item {
                 Item::Text(text) => writeln!(f, "{}", text.0)?,
                 Item::Link(link) => {
-                    let separator = if link.label.is_some() {" "} else {""};
-                    let label = link.label.as_ref().map(|label| label.0.as_str())
+                    let separator = if link.label.is_some() { " " } else { "" };
+                    let label = link
+                        .label
+                        .as_ref()
+                        .map(|label| label.0.as_str())
                         .unwrap_or("");
 
                     writeln!(f, "=> {}{}{}", link.uri, separator, label)?;
@@ -497,7 +495,6 @@ impl Quote {
         Self(lossy_escaped_line(text, &[QUOTE_START]))
     }
 }
-
 
 const LINK_START: &str = "=>";
 const PREFORMATTED_TOGGLE_START: &str = "```";

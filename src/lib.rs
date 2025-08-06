@@ -1,43 +1,37 @@
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 
-use std::{
-    panic::AssertUnwindSafe,
-    convert::TryFrom,
-    io::BufReader,
-    sync::Arc,
-    path::PathBuf,
-    time::Duration,
-};
+use crate::util::opt_timeout;
+use anyhow::{Context, Result, bail};
 use futures_core::future::BoxFuture;
+use lazy_static::lazy_static;
+use routing::RoutingNode;
+use std::{
+    collections::HashMap, convert::TryFrom, iter::FromIterator, panic::AssertUnwindSafe,
+    path::PathBuf, sync::Arc, time::Duration,
+};
+use tls::{tls_config, tls_sni_config};
 use tokio::{
-    prelude::*,
-    io::{self, BufStream},
-    net::{TcpStream, ToSocketAddrs},
+    io::{self, AsyncBufRead, AsyncBufReadExt, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufStream},
+    net::{TcpListener, TcpStream, ToSocketAddrs},
     time::timeout,
 };
-use tokio::net::TcpListener;
-use rustls::ClientCertVerifier;
-use rustls::internal::msgs::handshake::DigitallySignedStruct;
-use tokio_rustls::{rustls, TlsAcceptor};
-use rustls::*;
-use anyhow::{Result, Context, anyhow, bail, ensure};
-use lazy_static::lazy_static;
-use crate::util::opt_timeout;
-use routing::RoutingNode;
+use tokio_rustls::TlsAcceptor;
 
+pub mod routing;
+pub mod tls;
 pub mod types;
 pub mod util;
-pub mod routing;
 
 pub use mime;
-pub use uriparse as uri;
 pub use types::*;
+pub use uriparse as uri;
 
 pub const REQUEST_URI_MAX_LEN: usize = 1024;
 pub const GEMINI_PORT: u16 = 1965;
 
 type Handler = Arc<dyn Fn(Request) -> HandlerResponse + Send + Sync>;
-pub (crate) type HandlerResponse = BoxFuture<'static, Result<Response>>;
+pub(crate) type HandlerResponse = BoxFuture<'static, Result<Response>>;
 
 #[derive(Clone)]
 pub struct Server {
@@ -55,7 +49,10 @@ impl Server {
 
     async fn serve(self) -> Result<()> {
         loop {
-            let (stream, _addr) = self.listener.accept().await
+            let (stream, _addr) = self
+                .listener
+                .accept()
+                .await
                 .context("Failed to accept client")?;
             let this = self.clone();
 
@@ -69,11 +66,15 @@ impl Server {
 
     async fn serve_client(self, stream: TcpStream) -> Result<()> {
         let fut_accept_request = async {
-            let stream = self.tls_acceptor.accept(stream).await
+            let stream = self
+                .tls_acceptor
+                .accept(stream)
+                .await
                 .context("Failed to establish TLS session")?;
             let mut stream = BufStream::new(stream);
 
-            let request = receive_request(&mut stream).await
+            let request = receive_request(&mut stream)
+                .await
                 .context("Failed to receive request")?;
 
             Result::<_, anyhow::Error>::Ok((request, stream))
@@ -81,29 +82,53 @@ impl Server {
 
         // Use a timeout for interacting with the client
         let fut_accept_request = timeout(self.timeout, fut_accept_request);
-        let (mut request, mut stream) = fut_accept_request.await
+        let (mut request, mut stream) = fut_accept_request
+            .await
             .context("Client timed out while waiting for response")??;
 
-        debug!("Client requested: {}", request.uri());
+        let server_name = stream.get_ref().get_ref().1.server_name();
+
+        if let Some(name) = server_name {
+            debug!("[{}] Client requested: {}", name, request.uri());
+        } else {
+            debug!("[] Client requested: {}", request.uri());
+        }
 
         // Identify the client certificate from the tls stream.  This is the first
         // certificate in the certificate chain.
-        let client_cert = stream.get_ref()
+        let client_cert = stream
+            .get_ref()
             .get_ref()
             .1
-            .get_peer_certificates()
-            .and_then(|mut v| if v.is_empty() {None} else {Some(v.remove(0))});
+            .peer_certificates()
+            .and_then(|v| {
+                if v.is_empty() {
+                    None
+                } else {
+                    Some(v[0].clone())
+                }
+            });
 
+        request.set_server_name(server_name.map(str::to_string));
         request.set_cert(client_cert);
+        request.set_peer(
+            stream
+                .get_ref()
+                .get_ref()
+                .0
+                .peer_addr()
+                .ok()
+                .map(|a| a.to_string()),
+        );
 
         let response = if let Some((trailing, handler)) = self.routes.match_request(&request) {
-
             request.set_trailing(trailing);
 
             let handler = (handler)(request);
             let handler = AssertUnwindSafe(handler);
 
-            util::HandlerCatchUnwind::new(handler).await
+            util::HandlerCatchUnwind::new(handler)
+                .await
                 .unwrap_or_else(|_| Response::server_error(""))
                 .or_else(|err| {
                     error!("Handler failed: {:?}", err);
@@ -114,22 +139,26 @@ impl Server {
             Response::not_found()
         };
 
-        self.send_response(response, &mut stream).await
+        self.send_response(response, &mut stream)
+            .await
             .context("Failed to send response")?;
 
         Ok(())
     }
 
-    async fn send_response(&self, mut response: Response, stream: &mut (impl AsyncWrite + Unpin)) -> Result<()> {
+    async fn send_response(
+        &self,
+        mut response: Response,
+        stream: &mut (impl AsyncWrite + Unpin),
+    ) -> Result<()> {
         let maybe_body = response.take_body();
         let header = response.header();
 
-        let use_complex_timeout =
-            header.status.is_success() &&
-            maybe_body.is_some() &&
-            header.meta.as_str() != "text/plain" &&
-            header.meta.as_str() != "text/gemini" &&
-            self.complex_timeout.is_some();
+        let use_complex_timeout = header.status.is_success()
+            && maybe_body.is_some()
+            && header.meta.as_str() != "text/plain"
+            && header.meta.as_str() != "text/gemini"
+            && self.complex_timeout.is_some();
 
         let send_general_timeout;
         let send_header_timeout;
@@ -147,18 +176,24 @@ impl Server {
 
         opt_timeout(send_general_timeout, async {
             // Send the header
-            opt_timeout(send_header_timeout, send_response_header(response.header(), stream))
-                .await
-                .context("Timed out while sending response header")?
-                .context("Failed to write response header")?;
+            opt_timeout(
+                send_header_timeout,
+                send_response_header(response.header(), stream),
+            )
+            .await
+            .context("Timed out while sending response header")?
+            .context("Failed to write response header")?;
 
             // Send the body
-            opt_timeout(send_body_timeout, maybe_send_response_body(maybe_body, stream))
-                .await
-                .context("Timed out while sending response body")?
-                .context("Failed to write response body")?;
+            opt_timeout(
+                send_body_timeout,
+                maybe_send_response_body(maybe_body, stream),
+            )
+            .await
+            .context("Timed out while sending response body")?
+            .context("Failed to write response body")?;
 
-            Ok::<_,anyhow::Error>(())
+            Ok::<_, anyhow::Error>(())
         })
         .await
         .context("Timed out while sending response data")??;
@@ -169,8 +204,11 @@ impl Server {
 
 pub struct Builder<A> {
     addr: A,
+
     cert_path: PathBuf,
     key_path: PathBuf,
+    cert_key_mapping: Option<HashMap<String, (PathBuf, PathBuf)>>,
+
     timeout: Duration,
     complex_body_timeout_override: Option<Duration>,
     routes: RoutingNode<Handler>,
@@ -184,6 +222,7 @@ impl<A: ToSocketAddrs> Builder<A> {
             complex_body_timeout_override: Some(Duration::from_secs(30)),
             cert_path: PathBuf::from("cert/cert.pem"),
             key_path: PathBuf::from("cert/key.pem"),
+            cert_key_mapping: None,
             routes: RoutingNode::default(),
         }
     }
@@ -225,6 +264,25 @@ impl<A: ToSocketAddrs> Builder<A> {
     /// [`set_cert()`](Self::set_cert())
     pub fn set_key(mut self, key_path: impl Into<PathBuf>) -> Self {
         self.key_path = key_path.into();
+        self
+    }
+
+    /// Set the mapping between hostname and (certificate, key) pairs.
+    /// This allows serving different certificates for different hostnames and effectively
+    /// setting up vhosts.
+    ///
+    /// In this case certificates are required to have DNS name set using `subjectAltName`.
+    ///
+    /// This overrides calls to [`set_tls_dir()`](Self::set_tls_dir()), [`set_cert()`](Self::set_cert())
+    /// and [`set_key()`](Self::set_key()).
+    ///
+    /// This method can also be used to setup single host instead of mentioned methods.
+    pub fn set_key_cert_map(mut self, host_cert_key: HashMap<String, (String, String)>) -> Self {
+        self.cert_key_mapping =
+            Some(HashMap::from_iter(host_cert_key.into_iter().map(
+                |(hostname, cert_key)| (hostname, (cert_key.0.into(), cert_key.1.into())),
+            )));
+
         self
     }
 
@@ -302,10 +360,15 @@ impl<A: ToSocketAddrs> Builder<A> {
     }
 
     pub async fn serve(mut self) -> Result<()> {
-        let config = tls_config(&self.cert_path, &self.key_path)
-            .context("Failed to create TLS config")?;
+        let config = if self.cert_key_mapping.is_none() {
+            tls_config(&self.cert_path, &self.key_path).context("Failed to create TLS config")?
+        } else {
+            tls_sni_config(&self.cert_key_mapping.unwrap())
+                .context("Failed to create TLS config")?
+        };
 
-        let listener = TcpListener::bind(self.addr).await
+        let listener = TcpListener::bind(self.addr)
+            .await
             .context("Failed to create socket")?;
 
         self.routes.shrink();
@@ -344,13 +407,15 @@ async fn receive_request(stream: &mut (impl AsyncBufRead + Unpin)) -> Result<Req
     let uri = URIReference::try_from(&*uri)
         .context("Request URI is invalid")?
         .into_owned();
-    let request = Request::from_uri(uri)
-        .context("Failed to create request from URI")?;
+    let request = Request::from_uri(uri).context("Failed to create request from URI")?;
 
     Ok(request)
 }
 
-async fn send_response_header(header: &ResponseHeader, stream: &mut (impl AsyncWrite + Unpin)) -> Result<()> {
+async fn send_response_header(
+    header: &ResponseHeader,
+    stream: &mut (impl AsyncWrite + Unpin),
+) -> Result<()> {
     let header = format!(
         "{status} {meta}\r\n",
         status = header.status.code(),
@@ -363,7 +428,10 @@ async fn send_response_header(header: &ResponseHeader, stream: &mut (impl AsyncW
     Ok(())
 }
 
-async fn maybe_send_response_body(maybe_body: Option<Body>, stream: &mut (impl AsyncWrite + Unpin)) -> Result<()> {
+async fn maybe_send_response_body(
+    maybe_body: Option<Body>,
+    stream: &mut (impl AsyncWrite + Unpin),
+) -> Result<()> {
     if let Some(body) = maybe_body {
         send_response_body(body, stream).await?;
     }
@@ -374,49 +442,14 @@ async fn maybe_send_response_body(maybe_body: Option<Body>, stream: &mut (impl A
 async fn send_response_body(body: Body, stream: &mut (impl AsyncWrite + Unpin)) -> Result<()> {
     match body {
         Body::Bytes(bytes) => stream.write_all(&bytes).await?,
-        Body::Reader(mut reader) => { io::copy(&mut reader, stream).await?; },
+        Body::Reader(mut reader) => {
+            io::copy(&mut reader, stream).await?;
+        }
     }
 
     stream.flush().await?;
 
     Ok(())
-}
-
-fn tls_config(cert_path: &PathBuf, key_path: &PathBuf) -> Result<Arc<ServerConfig>> {
-    let mut config = ServerConfig::new(AllowAnonOrSelfsignedClient::new());
-
-    let cert_chain = load_cert_chain(cert_path)
-        .context("Failed to load TLS certificate")?;
-    let key = load_key(key_path)
-        .context("Failed to load TLS key")?;
-    config.set_single_cert(cert_chain, key)
-        .context("Failed to use loaded TLS certificate")?;
-
-    Ok(config.into())
-}
-
-fn load_cert_chain(cert_path: &PathBuf) -> Result<Vec<Certificate>> {
-    let certs = std::fs::File::open(cert_path)
-        .with_context(|| format!("Failed to open `{:?}`", cert_path))?;
-    let mut certs = BufReader::new(certs);
-    let certs = rustls::internal::pemfile::certs(&mut certs)
-        .map_err(|_| anyhow!("failed to load certs `{:?}`", cert_path))?;
-
-    Ok(certs)
-}
-
-fn load_key(key_path: &PathBuf) -> Result<PrivateKey> {
-    let keys = std::fs::File::open(key_path)
-        .with_context(|| format!("Failed to open `{:?}`", key_path))?;
-    let mut keys = BufReader::new(keys);
-    let mut keys = rustls::internal::pemfile::pkcs8_private_keys(&mut keys)
-        .map_err(|_| anyhow!("failed to load key `{:?}`", key_path))?;
-
-    ensure!(!keys.is_empty(), "no key found");
-
-    let key = keys.swap_remove(0);
-
-    Ok(key)
 }
 
 /// Mime for Gemini documents
@@ -430,62 +463,6 @@ lazy_static! {
 #[deprecated(note = "Use `GEMINI_MIME` instead", since = "0.3.0")]
 pub fn gemini_mime() -> Result<Mime> {
     Ok(GEMINI_MIME.clone())
-}
-
-/// A client cert verifier that accepts all connections
-///
-/// Unfortunately, rustls doesn't provide a ClientCertVerifier that accepts self-signed
-/// certificates, so we need to implement this ourselves.
-struct AllowAnonOrSelfsignedClient { }
-impl AllowAnonOrSelfsignedClient {
-
-    /// Create a new verifier
-    fn new() -> Arc<Self> {
-        Arc::new(Self {})
-    }
-
-}
-
-impl ClientCertVerifier for AllowAnonOrSelfsignedClient {
-
-    fn client_auth_root_subjects(
-        &self,
-        _: Option<&webpki::DNSName>
-    ) -> Option<DistinguishedNames> {
-        Some(Vec::new())
-    }
-
-    fn client_auth_mandatory(&self, _sni: Option<&webpki::DNSName>) -> Option<bool> {
-        Some(false)
-    }
-
-    // the below methods are a hack until webpki doesn't break with certain certs
-
-    fn verify_client_cert(
-        &self,
-        _: &[Certificate],
-        _: Option<&webpki::DNSName>
-    ) -> Result<ClientCertVerified, TLSError> {
-        Ok(ClientCertVerified::assertion())
-    }
-
-    fn verify_tls12_signature(
-        &self,
-        _message: &[u8],
-        _cert: &Certificate,
-        _dss: &DigitallySignedStruct,
-    ) -> Result<HandshakeSignatureValid, TLSError> {
-        Ok(HandshakeSignatureValid::assertion())
-    }
-
-    fn verify_tls13_signature(
-        &self,
-        _message: &[u8],
-        _cert: &Certificate,
-        _dss: &DigitallySignedStruct,
-    ) -> Result<HandshakeSignatureValid, TLSError> {
-        Ok(HandshakeSignatureValid::assertion())
-    }
 }
 
 #[cfg(test)]

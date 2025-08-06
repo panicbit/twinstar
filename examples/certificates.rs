@@ -2,10 +2,10 @@ use anyhow::*;
 use futures_core::future::BoxFuture;
 use futures_util::FutureExt;
 use log::LevelFilter;
-use tokio::sync::RwLock;
-use twinstar::{Certificate, GEMINI_PORT, Request, Response, Server};
 use std::collections::HashMap;
 use std::sync::Arc;
+use tokio::sync::RwLock;
+use twinstar::{Request, Response, Server, GEMINI_PORT};
 
 // Workaround for Certificates not being hashable
 type CertBytes = Vec<u8>;
@@ -16,10 +16,10 @@ async fn main() -> Result<()> {
         .filter_module("twinstar", LevelFilter::Debug)
         .init();
 
-    let users = Arc::<RwLock::<HashMap<CertBytes, String>>>::default();
+    let users = Arc::<RwLock<HashMap<CertBytes, String>>>::default();
 
     Server::bind(("0.0.0.0", GEMINI_PORT))
-        .add_route("/", move|req| handle_request(users.clone(), req))
+        .add_route("/", move |req| handle_request(users.clone(), req))
         .serve()
         .await
 }
@@ -31,18 +31,19 @@ async fn main() -> Result<()> {
 /// selecting a username.  They'll then get a message confirming their account creation.
 /// Any time this user visits the site in the future, they'll get a personalized welcome
 /// message.
-fn handle_request(users: Arc<RwLock<HashMap<CertBytes, String>>>, request: Request) -> BoxFuture<'static, Result<Response>> {
+fn handle_request(
+    users: Arc<RwLock<HashMap<CertBytes, String>>>,
+    request: Request,
+) -> BoxFuture<'static, Result<Response>> {
     async move {
-        if let Some(Certificate(cert_bytes)) = request.certificate() {
+        if request.certificate().is_some() {
+            let cert_bytes = request.certificate().unwrap().to_vec();
+
             // The user provided a certificate
             let users_read = users.read().await;
-            if let Some(user) = users_read.get(cert_bytes) {
+            if let Some(user) = users_read.get(&cert_bytes) {
                 // The user has already registered
-                Ok(
-                    Response::success_gemini(
-                        format!("Welcome {}!", user)
-                    )
-                )
+                Ok(Response::success_gemini(format!("Welcome {}!", user)))
             } else {
                 // The user still needs to register
                 drop(users_read);
@@ -50,15 +51,11 @@ fn handle_request(users: Arc<RwLock<HashMap<CertBytes, String>>>, request: Reque
                     // The user provided some input (a username request)
                     let username = query_part.as_str();
                     let mut users_write = users.write().await;
-                    users_write.insert(cert_bytes.clone(), username.to_owned());
-                    Ok(
-                        Response::success_gemini(
-                            format!(
-                                "Your account has been created {}!  Welcome!",
-                                username
-                            )
-                        )
-                    )
+                    users_write.insert(cert_bytes, username.to_owned());
+                    Ok(Response::success_gemini(format!(
+                        "Your account has been created {}!  Welcome!",
+                        username
+                    )))
                 } else {
                     // The user didn't provide input, and should be prompted
                     Response::input("What username would you like?")
@@ -68,5 +65,6 @@ fn handle_request(users: Arc<RwLock<HashMap<CertBytes, String>>>, request: Reque
             // The user didn't provide a certificate
             Ok(Response::client_certificate_required())
         }
-    }.boxed()
+    }
+    .boxed()
 }

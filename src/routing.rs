@@ -62,9 +62,9 @@ impl<T> RoutingNode<T> {
     /// `/foo/bar` would produce `vec!["bar"]`
     ///
     /// See [`RoutingNode`] for details on how routes are matched.
-    pub fn match_path<I,S>(&self, path: I) -> Option<(Vec<S>, &T)>
+    pub fn match_path<I, S>(&self, path: I) -> Option<(Vec<S>, &T)>
     where
-        I: IntoIterator<Item=S>,
+        I: IntoIterator<Item = S>,
         S: AsRef<str>,
     {
         let mut node = self;
@@ -91,7 +91,7 @@ impl<T> RoutingNode<T> {
             } else {
                 break;
             }
-        };
+        }
 
         if let Some(handler) = last_seen_handler {
             since_last_handler.extend(path);
@@ -107,14 +107,15 @@ impl<T> RoutingNode<T> {
     pub fn match_request(&self, req: &Request) -> Option<(Vec<String>, &T)> {
         let mut path = req.path().to_borrowed();
         path.normalize(false);
-        self.match_path(path.segments())
-            .map(|(segs, h)| (
+        self.match_path(path.segments()).map(|(segs, h)| {
+            (
                 segs.into_iter()
                     .map(Segment::as_str)
                     .map(str::to_owned)
                     .collect(),
                 h,
-            ))
+            )
+        })
     }
 
     /// Add a route to the network
@@ -135,7 +136,11 @@ impl<T> RoutingNode<T> {
     /// this method.
     ///
     /// For information about how routes work, see [`RoutingNode::match_path()`]
-    pub fn add_route_by_path(&mut self, mut path: Path, data: T) -> Result<(), ConflictingRouteError>{
+    pub fn add_route_by_path(
+        &mut self,
+        mut path: Path,
+        data: T,
+    ) -> Result<(), ConflictingRouteError> {
         debug_assert!(path.is_absolute());
         path.normalize(false);
 
@@ -208,11 +213,14 @@ impl<T> Default for RoutingNode<T> {
 #[derive(Debug, Clone, Copy)]
 pub struct ConflictingRouteError();
 
-impl std::error::Error for ConflictingRouteError { }
+impl std::error::Error for ConflictingRouteError {}
 
 impl std::fmt::Display for ConflictingRouteError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Attempted to create a route with the same matcher as an existing route")
+        write!(
+            f,
+            "Attempted to create a route with the same matcher as an existing route"
+        )
     }
 }
 
@@ -236,4 +244,4 @@ impl<'a, T> Iterator for Iter<'a, T> {
     }
 }
 
-impl<T> std::iter::FusedIterator for Iter<'_, T> { }
+impl<T> std::iter::FusedIterator for Iter<'_, T> {}

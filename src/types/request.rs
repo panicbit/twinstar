@@ -1,14 +1,17 @@
-use std::ops;
 use anyhow::*;
 use percent_encoding::percent_decode_str;
+use rustls::pki_types::CertificateDer;
+use std::ops;
 use uriparse::URIReference;
-use rustls::Certificate;
 
 pub struct Request {
     uri: URIReference<'static>,
     input: Option<String>,
-    certificate: Option<Certificate>,
     trailing_segments: Option<Vec<String>>,
+
+    server_name: Option<String>,
+    certificate: Option<CertificateDer<'static>>,
+    peer_addr: Option<String>,
 }
 
 impl Request {
@@ -18,7 +21,7 @@ impl Request {
 
     pub fn with_certificate(
         mut uri: URIReference<'static>,
-        certificate: Option<Certificate>
+        certificate: Option<CertificateDer<'static>>,
     ) -> Result<Self> {
         uri.normalize();
 
@@ -36,12 +39,15 @@ impl Request {
         Ok(Self {
             uri,
             input,
-            certificate,
             trailing_segments: None,
+
+            server_name: None,
+            certificate,
+            peer_addr: None,
         })
     }
 
-    pub const fn uri(&self) -> &URIReference {
+    pub const fn uri(&self) -> &URIReference<'_> {
         &self.uri
     }
 
@@ -75,7 +81,11 @@ impl Request {
             .path()
             .segments()
             .iter()
-            .map(|segment| percent_decode_str(segment.as_str()).decode_utf8_lossy().into_owned())
+            .map(|segment| {
+                percent_decode_str(segment.as_str())
+                    .decode_utf8_lossy()
+                    .into_owned()
+            })
             .collect::<Vec<String>>()
     }
 
@@ -83,17 +93,33 @@ impl Request {
         self.input.as_deref()
     }
 
-    pub fn set_cert(&mut self, cert: Option<Certificate>) {
+    pub fn set_server_name(&mut self, server_name: Option<String>) {
+        self.server_name = server_name
+    }
+
+    pub fn set_cert(&mut self, cert: Option<CertificateDer<'static>>) {
         self.certificate = cert;
+    }
+
+    pub fn set_peer(&mut self, peer_addr: Option<String>) {
+        self.peer_addr = peer_addr;
     }
 
     pub fn set_trailing(&mut self, segments: Vec<String>) {
         self.trailing_segments = Some(segments);
     }
 
+    pub const fn server_name(&self) -> Option<&String> {
+        self.server_name.as_ref()
+    }
+
     #[allow(clippy::missing_const_for_fn)]
-    pub fn certificate(&self) -> Option<&Certificate> {
+    pub fn certificate(&self) -> Option<&CertificateDer<'_>> {
         self.certificate.as_ref()
+    }
+
+    pub const fn peer_addr(&self) -> Option<&String> {
+        self.peer_addr.as_ref()
     }
 }
 

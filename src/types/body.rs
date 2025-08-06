@@ -1,6 +1,6 @@
-use tokio::io::AsyncRead;
-#[cfg(feature="serve_dir")]
+#[cfg(feature = "serve_dir")]
 use tokio::fs::File;
+use tokio::io::AsyncRead;
 
 use std::borrow::Borrow;
 
@@ -41,7 +41,7 @@ impl<'a> From<&'a str> for Body {
     }
 }
 
-#[cfg(feature="serve_dir")]
+#[cfg(feature = "serve_dir")]
 impl From<File> for Body {
     fn from(file: File) -> Self {
         Self::Reader(Box::new(file))

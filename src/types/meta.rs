@@ -1,9 +1,8 @@
-use anyhow::*;
-use crate::Mime;
 use crate::util::Cowy;
+use crate::Mime;
+use anyhow::*;
 
-
-#[derive(Debug,Clone,PartialEq,Eq,Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Meta(String);
 
 impl Meta {
@@ -12,8 +11,15 @@ impl Meta {
     /// Creates a new "Meta" string.
     /// Fails if `meta` contains `\n`.
     pub fn new(meta: impl Cowy<str>) -> Result<Self> {
-        ensure!(!meta.as_ref().contains('\n'), "Meta must not contain newlines");
-        ensure!(meta.as_ref().len() <= Self::MAX_LEN, "Meta must not exceed {} bytes", Self::MAX_LEN);
+        ensure!(
+            !meta.as_ref().contains('\n'),
+            "Meta must not contain newlines"
+        );
+        ensure!(
+            meta.as_ref().len() <= Self::MAX_LEN,
+            "Meta must not exceed {} bytes",
+            Self::MAX_LEN
+        );
 
         Ok(Self(meta.into()))
     }
@@ -48,7 +54,9 @@ impl Meta {
     }
 
     pub fn to_mime(&self) -> Result<Mime> {
-        let mime = self.as_str().parse::<Mime>()
+        let mime = self
+            .as_str()
+            .parse::<Mime>()
             .context("Meta is not a valid MIME")?;
         Ok(mime)
     }

@@ -1,4 +1,6 @@
-#[derive(Debug,Copy,Clone,PartialEq,Eq)]
+use std::convert::TryFrom;
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Status(u8);
 
 impl Status {
@@ -45,7 +47,35 @@ impl Status {
     }
 }
 
-#[derive(Copy,Clone,PartialEq,Eq)]
+impl TryFrom<u8> for Status {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            10 => Ok(Self::INPUT),
+            11 => Ok(Self::SENSITIVE_INPUT),
+            20 => Ok(Self::SUCCESS),
+            30 => Ok(Self::REDIRECT_TEMPORARY),
+            31 => Ok(Self::REDIRECT_PERMANENT),
+            40 => Ok(Self::TEMPORARY_FAILURE),
+            41 => Ok(Self::SERVER_UNAVAILABLE),
+            42 => Ok(Self::CGI_ERROR),
+            43 => Ok(Self::PROXY_ERROR),
+            44 => Ok(Self::SLOW_DOWN),
+            50 => Ok(Self::PERMANENT_FAILURE),
+            51 => Ok(Self::NOT_FOUND),
+            52 => Ok(Self::GONE),
+            53 => Ok(Self::PROXY_REQUEST_REFUSED),
+            59 => Ok(Self::BAD_REQUEST),
+            60 => Ok(Self::CLIENT_CERTIFICATE_REQUIRED),
+            61 => Ok(Self::CERTIFICATE_NOT_AUTHORIZED),
+            62 => Ok(Self::CERTIFICATE_NOT_VALID),
+            _ => Err(()),
+        }
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum StatusCategory {
     Input,
     Success,

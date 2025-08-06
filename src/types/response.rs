@@ -1,11 +1,11 @@
-use std::convert::TryInto;
 use std::borrow::Borrow;
+use std::convert::TryInto;
 
-use anyhow::*;
-use uriparse::URIReference;
-use crate::types::{ResponseHeader, Body, Mime, Document};
+use crate::types::{Body, Document, Mime, ResponseHeader};
 use crate::util::Cowy;
 use crate::GEMINI_MIME;
+use anyhow::*;
+use uriparse::URIReference;
 
 pub struct Response {
     header: ResponseHeader,
@@ -14,10 +14,7 @@ pub struct Response {
 
 impl Response {
     pub const fn new(header: ResponseHeader) -> Self {
-        Self {
-            header,
-            body: None,
-        }
+        Self { header, body: None }
     }
 
     #[deprecated(
@@ -61,7 +58,12 @@ impl Response {
         Self::success(&mime::TEXT_PLAIN, body)
     }
 
-    pub fn server_error(reason: impl Cowy<str>) -> Result<Self>  {
+    pub fn cgi_error_lossy(prompt: impl Cowy<str>) -> Self {
+        let header = ResponseHeader::cgi_error_lossy(prompt);
+        Self::new(header)
+    }
+
+    pub fn server_error(reason: impl Cowy<str>) -> Result<Self> {
         let header = ResponseHeader::server_error(reason)?;
         Ok(Self::new(header))
     }
