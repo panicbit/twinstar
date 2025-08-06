@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ## [0.4.0] - 2020-12-05
+
 ### Added
 - `document` API for creating Gemini documents
 - preliminary timeout API, incl a special case for complex MIMEs by [@Alch-Emi]
@@ -17,13 +18,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - customizable TLS cert & key paths by [@Alch-Emi]
 - `server_dir` default feature for serve_dir utils [@Alch-Emi]
 - Docments can be converted into responses with std::convert::Into [@Alch-Emi]
+
 ### Improved
 - build time and size by [@Alch-Emi](https://github.com/Alch-Emi)
+
 ### Changed
 - Added route API [@Alch-Emi](https://github.com/Alch-Emi)
 - Improved error handling in serve_dir [@Alch-Emi]
 
+### Deprecated
+- `Response::document`: use `Response::success_gemini()` or `Document::into()` [@Alch-Emi]
+
 ## [0.3.0] - 2020-11-14
+
 ### Added
 - `GEMINI_MIME_STR`, the `&str` representation of the Gemini MIME
 - `Meta::new_lossy`, constructor that never fails
@@ -39,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Instead of `gemini_mime()` use `GEMINI_MIME`
 
 ## [0.2.0] - 2020-11-14
+
 ### Added
 - Access to client certificates by [@Alch-Emi]
 
