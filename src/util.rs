@@ -37,82 +37,62 @@ pub async fn serve_file<P: AsRef<Path>>(path: P, mime: &Mime) -> Result<Response
     Ok(Response::success(mime, file))
 }
 
-pub enum ResolveResult {
-    Path(PathBuf),
-    Response(Response),
+pub fn dir_canonicalize<D: AsRef<Path>>(dir: D) -> Result<PathBuf, Response> {
+    let dir = dir.as_ref();
+    dir.canonicalize().map_err(|e| match e.kind() {
+        std::io::ErrorKind::NotFound => {
+            warn!(
+                "Path {} not found.  Check your configuration.",
+                dir.display()
+            );
+            Response::server_error("Server incorrectly configured").unwrap()
+        }
+        std::io::ErrorKind::PermissionDenied => {
+            warn!(
+                "Permission denied for {}.  Check that the server has access.",
+                dir.display()
+            );
+            Response::server_error("Server incorrectly configured").unwrap()
+        }
+        _ => warn_unexpected(e, dir, line!()).unwrap(),
+    })
 }
 
-#[cfg(feature = "serve_dir")]
 pub fn resolve_virtual_path<D: AsRef<Path>, P: AsRef<Path>>(
     dir: D,
     virtual_path: &[P],
-) -> ResolveResult {
+) -> Result<PathBuf, Response> {
     // Check server directory
     debug!("Dir: {}", dir.as_ref().display());
-    let dir = dir.as_ref();
-    let dir = match dir.canonicalize() {
-        Ok(dir) => dir,
-        Err(e) => match e.kind() {
-            std::io::ErrorKind::NotFound => {
-                warn!(
-                    "Path {} not found.  Check your configuration.",
-                    dir.display()
-                );
-                return ResolveResult::Response(
-                    Response::server_error("Server incorrectly configured").unwrap(),
-                );
-            }
-            std::io::ErrorKind::PermissionDenied => {
-                warn!(
-                    "Permission denied for {}.  Check that the server has access.",
-                    dir.display()
-                );
-                return ResolveResult::Response(
-                    Response::server_error("Server incorrectly configured").unwrap(),
-                );
-            }
-            _ => return ResolveResult::Response(warn_unexpected(e, dir, line!()).unwrap()),
-        },
-    };
+    let dir = dir_canonicalize(dir)?;
 
     // Virtual path is an uri, that - when coming from the server - is already normalized,
     // so fragment below  will create proper path that is "below" base `dir`.
-    let mut path = dir.to_path_buf();
+    let mut path = dir.clone();
     for segment in virtual_path {
         path.push(segment);
     }
 
     // Check virtual path inside filesystem.
-    let path = match path.canonicalize() {
-        Ok(dir) => dir,
-        Err(e) => {
-            match e.kind() {
-                std::io::ErrorKind::NotFound => {
-                    return ResolveResult::Response(Response::not_found());
-                }
-                std::io::ErrorKind::PermissionDenied => {
-                    // Runs when asked to serve a file in a restricted dir
-                    // i.e. not /noaccess, but /noaccess/file
-                    warn!(
-                        "Asked to serve {}, but permission denied by OS",
-                        path.display()
-                    );
-                    return ResolveResult::Response(Response::not_found());
-                }
-                _ => {
-                    return ResolveResult::Response(
-                        warn_unexpected(e, path.as_ref(), line!()).unwrap(),
-                    );
-                }
-            }
+    let path = path.canonicalize().map_err(|e| match e.kind() {
+        std::io::ErrorKind::NotFound => Response::not_found(),
+        std::io::ErrorKind::PermissionDenied => {
+            // Runs when asked to serve a file in a restricted dir
+            // i.e. not /noaccess, but /noaccess/file
+            warn!(
+                "Asked to serve {}, but permission denied by OS",
+                path.display()
+            );
+            Response::not_found()
         }
-    };
+        _ => warn_unexpected(e, path.as_ref(), line!()).unwrap(),
+    })?;
 
     if !path.starts_with(&dir) {
-        return ResolveResult::Response(Response::not_found());
+        Err(Response::not_found())
+    } else {
+        Ok(path)
     }
-
-    ResolveResult::Path(path)
 }
 
 #[cfg(feature = "serve_dir")]
@@ -121,8 +101,8 @@ pub async fn serve_dir<D: AsRef<Path>, P: AsRef<Path>>(
     virtual_path: &[P],
 ) -> Result<Response> {
     let path = match resolve_virtual_path(dir, virtual_path) {
-        ResolveResult::Path(path_buf) => path_buf,
-        ResolveResult::Response(response) => return Ok(response),
+        Ok(path_buf) => path_buf,
+        Err(response) => return Ok(response),
     };
 
     if !path.is_dir() {
