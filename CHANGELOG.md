@@ -8,10 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Virtual host support [@gim913]
+- `util::canonicalize` [@gim913]
+- `util::resolve_virtual_path` [@gim913]
 - `Response::cgi_error_lossy` [@gim913]
 - `ResponseHeader::cgi_error_lossy` [@gim913]
 - `impl TryFrom<u8> for Status` [@gim913]
-- `util::serve_file` (requires `serve_dir` feature) [@gim913]
+
+### Removed
+- `util::ResolveResult` [@gim913]
 
 ### Changed
 - Rust edition 2018 -> 2024 [@panicbit]
